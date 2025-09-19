@@ -1,5 +1,4 @@
 import gi, time, os, queue, threading
-
 import numpy as np
 
 from threading import Thread
@@ -8,7 +7,7 @@ gi.require_version('Gst', '1.0')
 from gi.repository import Gst
 
 
-def bytes_to_audio(raw_bytes, dtype = np.int32):
+def bytes_to_audio(raw_bytes, dtype=np.int32):
     """
         Convert 24-bit PCM raw bytes to a normalized NumPy float32 array.
 
@@ -31,20 +30,21 @@ def bytes_to_audio(raw_bytes, dtype = np.int32):
     # Pad the most significant byte (sign extend)
     samples_32bit = np.zeros((samples_24bit.shape[0],), dtype=np.int32)
     samples_32bit[:] = (
-        samples_24bit[:, 0].astype(np.int32) |
-        (samples_24bit[:, 1].astype(np.int32) << 8) |
-        (samples_24bit[:, 2].astype(np.int32) << 16)
+            samples_24bit[:, 0].astype(np.int32) |
+            (samples_24bit[:, 1].astype(np.int32) << 8) |
+            (samples_24bit[:, 2].astype(np.int32) << 16)
     )
 
     # Sign extension for negative numbers
     samples_32bit[samples_32bit >= 0x800000] -= 0x1000000
 
-    return samples_32bit.astype(np.float32) / (2**23)  # 24-bit signed
+    return samples_32bit.astype(np.float32) / (2 ** 23)  # 24-bit signed
 
 
 class MultiChannelQueue:
     """
     """
+
     def __init__(self, num_channels: int = None):
         """
             Initialize a MultiChannelQueue for synchronizing data across channels.
@@ -99,12 +99,14 @@ class MultiChannelQueue:
             Returns:
                 list: A list containing one data sample per channel.
         """
-        return self.ready.get(block = block, timeout = timeout)
+        return self.ready.get(block=block, timeout=timeout)
 
 
 class AudioInputManager:
     """
     """
+
+    @staticmethod
     def createFromEnv():
         """
         Factory method to create a AudioInputManager instance using environment variables.
@@ -120,9 +122,13 @@ class AudioInputManager:
         Returns:
             AudioInputManager: Configured AudioInputManager instance.
         """
-        return AudioInputManager(pipeline_ports = os.getenv("SOURCE_PORTS").split(","), enable_recording_saves = eval(os.getenv("ENABLE_REC_SAVE"), {}, {}), save_fp = os.getenv("REC_SAVE_FP"), record_duration = int(os.getenv("REC_DURATION")), rec_hz = int(os.getenv("REC_HZ")), stream_latency = int(os.getenv("STREAM_LATENCY")))
+        return AudioInputManager(pipeline_ports=os.getenv("SOURCE_PORTS").split(","),
+                                 enable_recording_saves=eval(os.getenv("ENABLE_REC_SAVE"), {}, {}),
+                                 save_fp=os.getenv("REC_SAVE_FP"), record_duration=int(os.getenv("REC_DURATION")),
+                                 rec_hz=int(os.getenv("REC_HZ")), stream_latency=int(os.getenv("STREAM_LATENCY")))
 
-    def __init__(self, pipeline_ports: list[str], enable_recording_saves: bool, save_fp: str, record_duration: int, rec_hz: int, stream_latency: int):
+    def __init__(self, pipeline_ports: list[str], enable_recording_saves: bool, save_fp: str, record_duration: int,
+                 rec_hz: int, stream_latency: int):
         """
             Initialize a GStreamer manager to handle multi-channel audio pipelines.
 
@@ -152,18 +158,18 @@ class AudioInputManager:
             pipeline = None
 
             gst_pipeline_str: str = f"udpsrc port={port} caps=\"application/x-rtp, media=(string)audio, clock-rate=(int){rec_hz}, channels=(int)2, encoding-name=(string)L24, payload=(int)98\" ! rtpjitterbuffer latency={stream_latency} ! rtpL24depay !  queue ! audioconvert ! audio/x-raw,channels=2 ! deinterleave name=d \
-                d.src_0 ! tee name=t0 \
-                d.src_1 ! tee name=t1 \
-                t0. ! queue max-size-time={record_duration} ! appsink name=sink1 \
-                t1. ! queue max-size-time={record_duration} ! appsink name=sink2"
+                    d.src_0 ! tee name=t0 \
+                    d.src_1 ! tee name=t1 \
+                    t0. ! queue max-size-time={record_duration} ! appsink name=sink1 \
+                    t1. ! queue max-size-time={record_duration} ! appsink name=sink2"
 
             if enable_recording_saves:
                 os.makedirs(f"{save_fp}/{channel}", exist_ok=True)
-                os.makedirs(f"{save_fp}/{channel+1}", exist_ok=True)
+                os.makedirs(f"{save_fp}/{channel + 1}", exist_ok=True)
 
                 gst_pipeline_str += f" \
-                t0. ! audioconvert ! audioresample ! splitmuxsink location=\"{save_fp}/{channel}/%d.wav\" muxer=wavenc max-size-time={record_duration} \
-                t1. ! audioconvert ! audioresample ! splitmuxsink location=\"{save_fp}/{channel+1}/%d.wav\" muxer=wavenc max-size-time={record_duration}"
+                    t0. ! audioconvert ! audioresample ! splitmuxsink location=\"{save_fp}/{channel}/%d.wav\" muxer=wavenc max-size-time={record_duration} \
+                    t1. ! audioconvert ! audioresample ! splitmuxsink location=\"{save_fp}/{channel + 1}/%d.wav\" muxer=wavenc max-size-time={record_duration}"
 
             # Setting GST's logging level to output.
             # see https://gstreamer.freedesktop.org/documentation/tutorials/basic/debugging-tools.html
@@ -175,13 +181,13 @@ class AudioInputManager:
                 exit(0)
 
             for i in range(2):
-                sink = pipeline.get_by_name(f"sink{i+1}")
+                sink = pipeline.get_by_name(f"sink{i + 1}")
                 if not sink:
                     print("Failed to get pipeline's sink.")
                     exit(0)
 
                 sink.set_property("emit-signals", True)
-                sink.connect("new-sample", lambda x, z = i: self._on_new_sample(z, x))
+                sink.connect("new-sample", lambda x, z=i: self._on_new_sample(z, x))
 
                 self._sinks.append(sink)
                 self._channel_states.update({sink: {"data": [], "accumulated_ns": 0}})
@@ -190,7 +196,7 @@ class AudioInputManager:
             channel += 2
 
         self._dataQueue = MultiChannelQueue(len(self._sinks))
-        self._thread = Thread(target = self._run, args = ())
+        self._thread = Thread(target=self._run, args=())
         self._continue = False
 
     def _on_new_sample(self, channel_id: int, sink):

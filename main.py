@@ -5,9 +5,12 @@ from audio import AudioInputManager
 import time
 
 if __name__ == "__main__":
-    load_dotenv()
+    loaded = load_dotenv()
+    if not loaded:
+        print("No ..env file found please create one.")
+        exit(1)
 
-    mgr = AudioInputManager.createFromEnv();
+    mgr = AudioInputManager.createFromEnv()
     mgr.start()
     time.sleep(30)
     mgr.stop()
