@@ -7,7 +7,7 @@ import time
 if __name__ == "__main__":
     load_dotenv()
 
-    mgr = AudioInputManager.createFromEnv();
+    mgr = AudioInputManager.create_from_env()
     mgr.start()
     time.sleep(30)
     mgr.stop()
