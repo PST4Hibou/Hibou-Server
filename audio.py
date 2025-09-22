@@ -122,7 +122,7 @@ class AudioInputManager:
             STREAM_LATENCY (str): GStreamer jitter buffer latency in ms.
             NET_IFACE (str): Network interface receiving the multicasted audio frames.
             RTP_PAYLOADS (str): Comma-separated list of the RTP payloads, same order as for SOURCE_PORTS.
-            MULTICAST_IP (str): IP on which the audio is multicasted on.
+            MULTICAST_IPS (str): Comma-separated list of IPs on which the audio is multicasted on.
 
         Returns:
             AudioInputManager: Configured AudioInputManager instance.
@@ -136,7 +136,7 @@ class AudioInputManager:
             stream_latency=int(os.getenv("STREAM_LATENCY")),
             net_iface=os.getenv("NET_IFACE"),
             rtp_payloads=os.getenv("RTP_PAYLOADS").split(","),
-            ip_address=os.getenv("MULTICAST_IP"),
+            ip_addresses=os.getenv("MULTICAST_IPS").split(","),
         )
 
     def __init__(
@@ -149,7 +149,7 @@ class AudioInputManager:
         stream_latency: int,
         net_iface: str,
         rtp_payloads: list[str],
-        ip_address: str,
+        ip_address: list[str],
     ):
         """
         Initialize a GStreamer manager to handle multi-channel audio pipelines.
@@ -163,7 +163,7 @@ class AudioInputManager:
             stream_latency (int): Jitter buffer latency in ms.
             net_iface (str): Network interface used to retrieve the PTP clock from Dante/Audinate devices.
             rtp_payloads (list[str]): UDP payloads for each audio source port.
-            ip_address (str): Multicast IP address.
+            ip_addresses (list[str]): Comma-separated list of IPs on which the audio is multicasted on.
         """
         self.pipeline_ports = pipeline_ports
         self.enable_recording_saves = enable_recording_saves
@@ -184,6 +184,7 @@ class AudioInputManager:
         for pipeline_id in range(len(pipeline_ports)):
             port = pipeline_ports[pipeline_id]
             payload = rtp_payloads[pipeline_id]
+            ip_address = ip_addresses[pipeline_id]
 
             gst_pipeline_str: str = (
                 f'udpsrc address={ip_address} port={port} multicast-iface={net_iface} caps="application/x-rtp, media=(string)audio, clock-rate=(int){rec_hz}, channels=(int)2, encoding-name=(string)L24, payload=(int){payload}" ! rtpjitterbuffer latency={stream_latency} ! rtpL24depay !  queue ! audioconvert ! audio/x-raw, channels=(int)2 ! deinterleave name=d \
