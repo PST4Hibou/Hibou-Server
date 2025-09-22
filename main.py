@@ -10,7 +10,7 @@ if __name__ == "__main__":
         print("No ..env file found please create one.")
         exit(1)
 
-    mgr = AudioInputManager.createFromEnv()
+    mgr = AudioInputManager.create_from_env()
     mgr.start()
     time.sleep(30)
     mgr.stop()
