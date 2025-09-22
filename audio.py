@@ -149,7 +149,7 @@ class AudioInputManager:
         stream_latency: int,
         net_iface: str,
         rtp_payloads: list[str],
-        ip_address: list[str],
+        ip_addresses: list[str],
     ):
         """
         Initialize a GStreamer manager to handle multi-channel audio pipelines.
