@@ -1,9 +1,8 @@
 import gi, time, os, queue, threading
 
-import numpy as np
-
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst
+import numpy as np
 
 
 def bytes_to_audio(raw_bytes, dtype=np.int32):
@@ -187,7 +186,7 @@ class AudioInputManager:
             ip_address = ip_addresses[pipeline_id]
 
             gst_pipeline_str: str = (
-                f'udpsrc address={ip_address} port={port} multicast-iface={net_iface} caps="application/x-rtp, media=(string)audio, clock-rate=(int){rec_hz}, channels=(int)2, encoding-name=(string)L24, payload=(int){payload}" ! rtpjitterbuffer latency={stream_latency} ! rtpL24depay !  queue ! audioconvert ! audio/x-raw, channels=(int)2 ! deinterleave name=d \
+                f'udpsrc address={ip_address} port={port} multicast-iface={net_iface} caps="application/x-rtp, media=(string)audio, clock-rate=(int){rec_hz}, channels=(int)2, encoding-name=(string)L24, payload=(int){payload}" ! rtpjitterbuffer latency={stream_latency} ! rtpL24depay !  queue ! audioconvert ! audio/x-raw, format=S24LE, channels=(int)2 ! deinterleave name=d \
                 d.src_0 ! tee name=t0 \
                 d.src_1 ! tee name=t1 \
                 t0. ! queue max-size-time={record_duration} ! appsink name=sink0 \
@@ -196,11 +195,11 @@ class AudioInputManager:
 
             if enable_recording_saves:
                 os.makedirs(f"{save_fp}/{channel}", exist_ok=True)
-                os.makedirs(f"{save_fp}/{channel+1}", exist_ok=True)
+                os.makedirs(f"{save_fp}/{channel + 1}", exist_ok=True)
 
                 gst_pipeline_str += f' \
                 t0. ! audioconvert ! audioresample ! splitmuxsink location="{save_fp}/{channel}/%d.wav" muxer=wavenc max-size-time={record_duration} \
-                t1. ! audioconvert ! audioresample ! splitmuxsink location="{save_fp}/{channel+1}/%d.wav" muxer=wavenc max-size-time={record_duration}'
+                t1. ! audioconvert ! audioresample ! splitmuxsink location="{save_fp}/{channel + 1}/%d.wav" muxer=wavenc max-size-time={record_duration}'
 
             # Setting GST's logging level to output.
             # see https://gstreamer.freedesktop.org/documentation/tutorials/basic/debugging-tools.html
