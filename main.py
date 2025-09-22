@@ -2,21 +2,19 @@
 
 from noise_reduction import apply_noise_reduction
 from audio import AudioInputManager
-from dotenv import load_dotenv
+from settings import SETTINGS
 import sounddevice as sd
 import time
+
 
 def audio_processing(data):
     audios = apply_noise_reduction(data)
 
     sd.play(audios, samplerate=48000, blocking=False)
 
-if __name__ == "__main__":
-    loaded = load_dotenv()
-    if not loaded:
-        print("No .env file found please create one.")
-        exit(1)
 
+if __name__ == "__main__":
+    print("Loaded settings: ", SETTINGS)
     mgr = AudioInputManager.create_from_env()
     mgr.on_data_ready = audio_processing
     mgr.start()

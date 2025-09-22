@@ -2,6 +2,7 @@ import gi, time, os, queue, threading
 
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst
+from settings import SETTINGS
 import numpy as np
 
 
@@ -128,15 +129,15 @@ class AudioInputManager:
             AudioInputManager: Configured AudioInputManager instance.
         """
         return AudioInputManager(
-            pipeline_ports=os.getenv("SOURCE_PORTS").split(","),
-            enable_recording_saves=eval(os.getenv("ENABLE_REC_SAVE"), {}, {}),
-            save_fp=os.getenv("REC_SAVE_FP"),
-            record_duration=int(os.getenv("REC_DURATION")),
-            rec_hz=int(os.getenv("REC_HZ")),
-            stream_latency=int(os.getenv("STREAM_LATENCY")),
-            net_iface=os.getenv("NET_IFACE"),
-            rtp_payloads=os.getenv("RTP_PAYLOADS").split(","),
-            ip_addresses=os.getenv("MULTICAST_IPS").split(","),
+            pipeline_ports=SETTINGS.SOURCE_PORTS,
+            enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
+            save_fp=SETTINGS.REC_SAVE_FP,
+            record_duration=int(SETTINGS.REC_DURATION),
+            rec_hz=int(SETTINGS.REC_HZ),
+            stream_latency=int(SETTINGS.STREAM_LATENCY),
+            net_iface=SETTINGS.NET_IFACE,
+            rtp_payloads=SETTINGS.RTP_PAYLOADS,
+            ip_addresses=SETTINGS.MULTICAST_IPS,
         )
 
     def __init__(
