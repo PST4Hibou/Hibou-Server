@@ -10,7 +10,7 @@ import time
 def audio_processing(data):
     audios = apply_noise_reduction(data)
 
-    sd.play(audios, samplerate=48000, blocking=False)
+    sd.play(audios, samplerate=SETTINGS.REC_HZ, blocking=False)
 
 
 if __name__ == "__main__":
