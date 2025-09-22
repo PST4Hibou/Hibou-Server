@@ -1,8 +1,8 @@
 #!/bin/python3
 
-from noise_reduction import apply_noise_reduction
-from audio import AudioInputManager
-from settings import SETTINGS
+from src.processing.noise_reduction import apply_noise_reduction
+from src.audio.audio import AudioInputManager
+from src.settings import SETTINGS
 import sounddevice as sd
 import time
 

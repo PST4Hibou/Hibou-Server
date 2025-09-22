@@ -1,4 +1,4 @@
-from settings import SETTINGS
+from src.settings import SETTINGS
 import noisereduce as nr
 import torch
 

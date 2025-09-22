@@ -1,0 +1,13 @@
+[project]
+name = "hibou"
+version = "0.1.0"
+description = "Hibou project"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "dotenv>=0.9.9",
+    "noisereduce>=3.0.3",
+    "pygobject>=3.54.2",
+    "sounddevice>=0.5.2",
+    "torch>=2.8.0",
+]

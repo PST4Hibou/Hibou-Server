@@ -2,7 +2,7 @@ import gi, time, os, queue, threading
 
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst
-from settings import SETTINGS
+from src.settings import SETTINGS
 import numpy as np
 
 
