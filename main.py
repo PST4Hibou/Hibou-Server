@@ -1,17 +1,15 @@
 #!/bin/python3
 
-import time
-import sounddevice as sd
-from dotenv import load_dotenv
-from audio import AudioInputManager
 from noise_reduction import apply_noise_reduction
-
+from audio import AudioInputManager
+from dotenv import load_dotenv
+import sounddevice as sd
+import time
 
 def audio_processing(data):
     audios = apply_noise_reduction(data)
 
     sd.play(audios, samplerate=48000, blocking=False)
-
 
 if __name__ == "__main__":
     loaded = load_dotenv()
