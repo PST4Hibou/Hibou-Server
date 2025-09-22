@@ -26,7 +26,8 @@ def bytes_to_audio(raw_bytes, dtype=np.int32):
     # Little-endian L24 -> int32
     # Pad the most significant byte (sign extend)
     samples_32bit = np.zeros((samples_24bit.shape[0],), dtype=np.int32)
-    # Transform each 3 btes-per-bytes to uint32 by performing shift on each 0th, 1st and 2nd following bytes of each seq of 3 elems.
+    # Transform each 3 btes-per-bytes to uint32 by performing shift on each 0th,
+    # 1st and 2nd following bytes of each seq of 3 elems.
     samples_32bit[:] = (
         samples_24bit[:, 0].astype(np.int32)
         | (samples_24bit[:, 1].astype(np.int32) << 8)
@@ -185,21 +186,34 @@ class AudioInputManager:
             payload = rtp_payloads[pipeline_id]
             ip_address = ip_addresses[pipeline_id]
 
-            gst_pipeline_str: str = (
-                f'udpsrc address={ip_address} port={port} multicast-iface={net_iface} caps="application/x-rtp, media=(string)audio, clock-rate=(int){rec_hz}, channels=(int)2, encoding-name=(string)L24, payload=(int){payload}" ! rtpjitterbuffer latency={stream_latency} ! rtpL24depay !  queue ! audioconvert ! audio/x-raw, format=S24LE, channels=(int)2 ! deinterleave name=d \
-                d.src_0 ! tee name=t0 \
-                d.src_1 ! tee name=t1 \
-                t0. ! queue max-size-time={record_duration} ! appsink name=sink0 \
-                t1. ! queue max-size-time={record_duration} ! appsink name=sink1'
+            gst_pipeline_str = (
+                f"udpsrc address={ip_address} port={port} multicast-iface={net_iface} "
+                f'caps="application/x-rtp, media=(string)audio, clock-rate=(int){rec_hz}, '
+                f'channels=(int)2, encoding-name=(string)L24, payload=(int){payload}" ! '
+                f"rtpjitterbuffer latency={stream_latency} ! "
+                f"rtpL24depay ! "
+                f"queue ! "
+                f"audioconvert ! "
+                f"audio/x-raw, format=S24LE, channels=(int)2 ! "
+                f"deinterleave name=d "
+                f"d.src_0 ! tee name=t0 "
+                f"d.src_1 ! tee name=t1 "
+                f"t0. ! queue max-size-time={record_duration} ! appsink name=sink0 "
+                f"t1. ! queue max-size-time={record_duration} ! appsink name=sink1"
             )
 
             if enable_recording_saves:
                 os.makedirs(f"{save_fp}/{channel}", exist_ok=True)
                 os.makedirs(f"{save_fp}/{channel + 1}", exist_ok=True)
 
-                gst_pipeline_str += f' \
-                t0. ! audioconvert ! audioresample ! splitmuxsink location="{save_fp}/{channel}/%d.wav" muxer=wavenc max-size-time={record_duration} \
-                t1. ! audioconvert ! audioresample ! splitmuxsink location="{save_fp}/{channel + 1}/%d.wav" muxer=wavenc max-size-time={record_duration}'
+                gst_pipeline_str += (
+                    f" t0. ! audioconvert ! audioresample ! "
+                    f'splitmuxsink location="{save_fp}/{channel}/%d.wav" muxer=wavenc '
+                    f"max-size-time={record_duration} "
+                    f"t1. ! audioconvert ! audioresample ! "
+                    f'splitmuxsink location="{save_fp}/{channel + 1}/%d.wav" muxer=wavenc '
+                    f"max-size-time={record_duration}"
+                )
 
             # Setting GST's logging level to output.
             # see https://gstreamer.freedesktop.org/documentation/tutorials/basic/debugging-tools.html
