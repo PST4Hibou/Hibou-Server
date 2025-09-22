@@ -112,7 +112,7 @@ class AudioInputManager:
     @staticmethod
     def create_from_env():
         """
-        Factory method to create a AudioInputManager instance using environment variables.
+        Factory method to create an AudioInputManager instance using environment variables.
 
         Environment Variables:
             SOURCE_PORTS (str): Comma-separated list of UDP source ports.
