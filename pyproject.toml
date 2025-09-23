@@ -9,5 +9,6 @@ dependencies = [
     "noisereduce>=3.0.3",
     "pygobject>=3.54.2",
     "sounddevice>=0.5.2",
+    "soundfile>=0.13.1",
     "torch>=2.8.0",
 ]
