@@ -7,10 +7,16 @@ import sounddevice as sd
 import time
 
 
-def audio_processing(data):
-    audios = apply_noise_reduction(data)
+def play_sample(audio):
+    sd.play(audio, samplerate=SETTINGS.REC_HZ, blocking=False)
 
-    sd.play(audios, samplerate=SETTINGS.REC_HZ, blocking=False)
+
+def audio_processing(data):
+    enhanced_audio = apply_noise_reduction(data)
+
+    play_sample(enhanced_audio)
+
+    return enhanced_audio
 
 
 if __name__ == "__main__":
