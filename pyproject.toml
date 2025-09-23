@@ -5,6 +5,7 @@ description = "Hibou project"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+    "black>=25.9.0",
     "dotenv>=0.9.9",
     "noisereduce>=3.0.3",
     "pygobject>=3.54.2",

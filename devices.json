@@ -1,0 +1,20 @@
+{
+  "devices": [
+    {
+      "name": "HCAN_0",
+      "model": "hasseb",
+      "ip": "192.168.250.12",
+      "port": 5001,
+      "multicast_ip": "192.168.250.255",
+      "rtp": 98
+    },
+    {
+      "name": "HCAN_1",
+      "model": "hasseb",
+      "ip": "192.168.250.11",
+      "port": 5004,
+      "multicast_ip": "192.168.250.255",
+      "rtp": 98
+    }
+  ]
+}

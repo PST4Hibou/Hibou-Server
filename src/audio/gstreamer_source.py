@@ -1,7 +1,8 @@
-import gi, queue, threading, os, time
+import gi, threading, os, time
 
 from src.audio.multi_channel_queue import MultiChannelQueue
 from src.audio.utils import bytes_to_audio
+from src.devices.devices import AudioDevice
 
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst
@@ -11,15 +12,13 @@ from src.audio.base_source import BaseAudioSource
 class GStreamerAudioSource(BaseAudioSource):
     def __init__(
         self,
-        pipeline_ports: list[str],
+        can_devices: list[AudioDevice],
         enable_recording_saves: bool,
         save_fp: str,
         record_duration: int,
         rec_hz: int,
         stream_latency: int,
         net_iface: str,
-        rtp_payloads: list[str],
-        ip_addresses: list[str],
     ):
         """
         Initialize a GStreamer manager to handle multi-channel audio pipelines.
@@ -36,7 +35,7 @@ class GStreamerAudioSource(BaseAudioSource):
             ip_addresses (list[str]): Comma-separated list of IPs on which the audio is multicasted on.
         """
         super().__init__()
-        self.pipeline_ports = pipeline_ports
+        self.can_devices = can_devices
         self.enable_recording_saves = enable_recording_saves
         self.save_fp = save_fp
         self.record_duration = record_duration
@@ -52,10 +51,10 @@ class GStreamerAudioSource(BaseAudioSource):
             print("Could not initialize GStreamer.")
 
         channel = 0
-        for pipeline_id in range(len(pipeline_ports)):
-            port = pipeline_ports[pipeline_id]
-            payload = rtp_payloads[pipeline_id]
-            ip_address = ip_addresses[pipeline_id]
+        for dev in self.can_devices:
+            port = dev.port
+            payload = dev.rtp
+            ip_address = dev.multicast_ip
 
             gst_pipeline_str = (
                 f"udpsrc address={ip_address} port={port} multicast-iface={net_iface} "
@@ -106,7 +105,7 @@ class GStreamerAudioSource(BaseAudioSource):
                 # sink.set_property("drop", True)   # Drop buffers if app is slow
                 # sink.set_property("max-buffers", 10)  # Limit buffer queue
                 sink.connect(
-                    "new-sample", self._on_new_sample, i
+                    "new-sample", self._on_new_sample, channel + i
                 )  # Pass channel_id directly
 
                 self._sinks.append(sink)

@@ -10,15 +10,13 @@ if not load_dotenv():
 Settings = namedtuple(
     "Settings",
     [
-        "SOURCE_PORTS",
-        "RTP_PAYLOADS",
         "ENABLE_REC_SAVE",
         "REC_SAVE_FP",
         "REC_DURATION",
         "REC_HZ",
         "STREAM_LATENCY",
         "NET_IFACE",
-        "MULTICAST_IPS",
+        "DEVICES_CONFIG_PATH",
         "STATIONARY",
         "DEVICE",
     ],
@@ -37,17 +35,15 @@ def parse_bool(value: str) -> bool:
 
 def load_settings() -> Settings:
     return Settings(
-        SOURCE_PORTS=parse_list(os.getenv("SOURCE_PORTS", "5004")),
-        RTP_PAYLOADS=parse_list(os.getenv("RTP_PAYLOADS", "98")),
-        ENABLE_REC_SAVE=parse_bool(os.getenv("ENABLE_REC_SAVE", "true")),
-        REC_SAVE_FP=os.getenv("REC_SAVE_FP", "./recs"),
-        REC_DURATION=int(os.getenv("REC_DURATION", "1000")) * 10**6,  # ns
-        REC_HZ=int(os.getenv("REC_HZ", "48000")),
-        STREAM_LATENCY=int(os.getenv("STREAM_LATENCY", "50")),
-        NET_IFACE=os.getenv("NET_IFACE", "enp2s0"),
-        MULTICAST_IPS=parse_list(os.getenv("MULTICAST_IPS", "192.168.250.255")),
-        STATIONARY=parse_bool(os.getenv("STATIONARY", "true")),
-        DEVICE=os.getenv("DEVICE", "cpu"),
+        ENABLE_REC_SAVE=parse_bool(os.getenv("ENABLE_REC_SAVE")),
+        REC_SAVE_FP=os.getenv("REC_SAVE_FP"),
+        REC_DURATION=int(os.getenv("REC_DURATION")) * 10**6,  # ns
+        REC_HZ=int(os.getenv("REC_HZ")),
+        STREAM_LATENCY=int(os.getenv("STREAM_LATENCY")),
+        NET_IFACE=os.getenv("NET_IFACE"),
+        DEVICES_CONFIG_PATH=os.getenv("DEVICES_CONFIG_PATH"),
+        STATIONARY=parse_bool(os.getenv("STATIONARY")),
+        DEVICE=os.getenv("DEVICE"),
     )
 
 
