@@ -1,8 +1,6 @@
 #!/bin/python3
-from src.processing.noise_reduction import apply_noise_reduction
-from src.audio.gstreamer_source import GStreamerAudioSource
-from src.audio.file_source import FileAudioSource
-from src.audio.audio import AudioInputManager
+from src.audio.processing.noise_reduction import apply_noise_reduction
+from src.audio.sources.rtp_source import RTPAudioSource
 from src.devices.devices import AudioDevice
 from src.settings import SETTINGS
 import sounddevice as sd
@@ -23,7 +21,7 @@ if __name__ == "__main__":
 
     devices = AudioDevice.load_devices(SETTINGS.DEVICES_CONFIG_PATH)
 
-    source = GStreamerAudioSource(
+    source = RTPAudioSource(
         can_devices=devices,
         enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
         save_fp=SETTINGS.REC_SAVE_FP,
@@ -35,8 +33,7 @@ if __name__ == "__main__":
 
     # source = FileAudioSource()
 
-    manager = AudioInputManager(source)
-    manager.on_data_ready = audio_processing
+    source.set_callback(audio_processing)
 
     try:
         source.start()
