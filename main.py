@@ -1,5 +1,6 @@
 #!/bin/python3
 from src.audio.processing.noise_reduction import apply_noise_reduction
+from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
 from src.devices.devices import AudioDevice
 from src.settings import SETTINGS
@@ -11,15 +12,18 @@ def play_sample(channels: list[float], channel_id=1):
 
 
 def audio_processing(channels: list[float]):
-    enhanced_audio = apply_noise_reduction(channels)
+    # enhanced_audio = apply_noise_reduction(channels)
 
-    play_sample(enhanced_audio)  # Only for debug purposes
+    play_sample(channels, 0)  # Only for debug purposes
 
 
 if __name__ == "__main__":
     print("Loaded settings: ", SETTINGS)
 
     devices = AudioDevice.load_devices(SETTINGS.DEVICES_CONFIG_PATH)
+
+    for dev in devices:
+        print(dev)
 
     source = RTPAudioSource(
         can_devices=devices,
@@ -31,7 +35,14 @@ if __name__ == "__main__":
         net_iface=SETTINGS.NET_IFACE,
     )
 
-    # source = FileAudioSource()
+    # source = FileAudioSource(
+    #     folder_path="./in",
+    #     channel_prefix="ch_",
+    #     channels_count=4,
+    #     save_fp=SETTINGS.REC_SAVE_FP,
+    #     enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
+    #     record_duration=SETTINGS.REC_DURATION,
+    # )
 
     source.set_callback(audio_processing)
 

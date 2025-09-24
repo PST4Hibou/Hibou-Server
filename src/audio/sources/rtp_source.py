@@ -17,18 +17,36 @@ class RTPAudioSource(GstreamerSource):
         net_iface: str,
     ):
         """
-        Initialize a GStreamer manager to handle multi-channel audio pipelines.
+        Initialize a GStreamer manager to handle multichannel audio streams
+        received via RTP from CAN/Dante audio devices.
 
         Args:
-            pipeline_ports (list[str]): UDP ports providing audio streams.
-            enable_recording_saves (bool): Whether to save recordings to disk.
-            save_fp (str): File path for saving recordings if enabled.
-            record_duration (int): Recording segment duration (ns).
-            rec_hz (int): Sampling rate in Hz.
-            stream_latency (int): Jitter buffer latency in ms.
-            net_iface (str): Network interface used to retrieve the PTP clock from Dante/Audinate devices.
-            rtp_payloads (list[str]): UDP payloads for each audio source port.
-            ip_addresses (list[str]): Comma-separated list of IPs on which the audio is multicasted on.
+            can_devices (list[AudioDevice]): List of AudioDevice objects representing
+                the devices providing RTP audio streams. Each device should
+                specify the port, payload, and multicast IP.
+
+            enable_recording_saves (bool): Whether to save incoming streams to disk.
+
+            save_fp (str): Root folder path for saving recordings if
+                enable_recording_saves is True. Subfolders will be created per channel.
+
+            record_duration (int): Duration of each recording segment in nanoseconds.
+
+            rec_hz (int): Sampling rate of the incoming audio streams in Hz.
+
+            stream_latency (int): Latency of the RTP jitter buffer in milliseconds.
+
+            net_iface (str): Network interface used to retrieve the PTP clock from
+                Dante/Audinate devices.
+
+        Raises:
+            ValueError: If device configurations are inconsistent or unsupported.
+            RuntimeError: If GStreamer pipeline creation fails.
+
+        Notes:
+            - Each AudioDevice in can_devices is mapped to a separate GStreamer pipeline.
+            - Pipelines are structured to handle multichannel audio with optional
+              recording to disk.
         """
         self.can_devices = can_devices
         self.enable_recording_saves = enable_recording_saves
@@ -75,6 +93,7 @@ class RTPAudioSource(GstreamerSource):
                 )
 
             pipeline_strings.append(gst_pipeline_str)
+            channel += 2
 
         # Our audios are PCM 24, meaning each audio sample is 3 bytes.
         super().__init__(pipeline_strings, int((rec_hz * record_duration / 1e9) * 3))
