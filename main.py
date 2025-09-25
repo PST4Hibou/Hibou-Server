@@ -1,9 +1,11 @@
 #!/bin/python3
+from src.audio.processing.noise_reduction import apply_noise_reduction
 from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
 from src.devices.devices import AudioDevice
 from src.settings import SETTINGS
 from src.logger import logger
+from src.arguments import args
 import sounddevice as sd
 
 
@@ -24,23 +26,24 @@ if __name__ == "__main__":
     logger.info(f"{len(devices)} devices loaded...")
     logger.debug(f"Devices: {devices}")
 
-    source = RTPAudioSource(
-        devices=devices,
-        enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
-        save_fp=SETTINGS.REC_SAVE_FP,
-        record_duration=int(SETTINGS.REC_DURATION),
-        rec_hz=int(SETTINGS.REC_HZ),
-        stream_latency=int(SETTINGS.STREAM_LATENCY),
-    )
-
-    # source = FileAudioSource(
-    #     folder_path="./in",
-    #     channel_prefix="ch_",
-    #     channels_count=4,
-    #     save_fp=SETTINGS.REC_SAVE_FP,
-    #     enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
-    #     record_duration=SETTINGS.REC_DURATION,
-    # )
+    if args.infer_from_folder:
+        source = FileAudioSource(
+            folder_path=args.infer_from_folder,
+            channel_prefix="ch_",
+            channels_count=4,
+            save_fp=SETTINGS.REC_SAVE_FP,
+            enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
+            record_duration=SETTINGS.REC_DURATION,
+        )
+    else:
+        source = RTPAudioSource(
+            devices=devices,
+            enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
+            save_fp=SETTINGS.REC_SAVE_FP,
+            record_duration=int(SETTINGS.REC_DURATION),
+            rec_hz=int(SETTINGS.REC_HZ),
+            stream_latency=int(SETTINGS.STREAM_LATENCY),
+        )
 
     # Every SETTINGS.REC_DURATION seconds, this function is called
     source.set_callback(audio_processing)

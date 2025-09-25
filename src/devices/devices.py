@@ -42,3 +42,6 @@ class AudioDevice:
 
     def __str__(self):
         return f"Device: {self.name}, Model: {self.model}, IP: {self.ip}, Port: {self.port}, Multicast IP: {self.multicast_ip}, RTP: {self.rtp}, Interface: {self.interface}"
+
+    def __repr__(self):
+        return self.__str__()
