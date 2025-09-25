@@ -75,7 +75,7 @@ class RTPAudioSource(GstreamerSource):
                 f"d.src_0 ! tee name=t0 "
                 f"d.src_1 ! tee name=t1 "
                 f"t0. ! queue max-size-time={record_duration} ! appsink "
-                f"t1. ! queue max-size-time={record_duration} ! appsink"
+                f"t1. ! queue max-size-time={record_duration} ! appsink "
             )
 
             if enable_recording_saves:

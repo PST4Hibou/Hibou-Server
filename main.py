@@ -42,6 +42,7 @@ if __name__ == "__main__":
     #     record_duration=SETTINGS.REC_DURATION,
     # )
 
+    # Every SETTINGS.REC_DURATION seconds, this function is called
     source.set_callback(audio_processing)
 
     try:
