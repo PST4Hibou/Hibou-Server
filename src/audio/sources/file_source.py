@@ -77,10 +77,11 @@ class FileAudioSource(GstreamerSource):
                     f'filesrc location="{fp}" ! '
                     f"decodebin ! "
                     f"audioconvert ! "
+                    f"audio/x-raw, format=F32LE ! "
                     f"audioresample ! "
                     f"identity sync=true ! "  # <--- throttle to realtime
                     f"appsink name=appsink_ch{ch}_file{idx} "
-                    f"emit-signals=true drop=false max-buffers=1"
+                    f"drop=false max-buffers=1"
                 )
 
                 if self._enable_recording_saves:

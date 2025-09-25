@@ -70,13 +70,15 @@ class RTPAudioSource(GstreamerSource):
                 f"rtpL24depay ! "
                 f"queue ! "
                 f"audioconvert ! "
-                f"audio/x-raw, format=S24LE, channels=(int)2 ! "
+                f"audio/x-raw, format=F32LE, channels=(int)2 ! "
                 f"deinterleave name=d "
                 f"d.src_0 ! tee name=t0 "
                 f"d.src_1 ! tee name=t1 "
-                f"t0. ! queue max-size-time={record_duration} ! appsink "
-                f"t1. ! queue max-size-time={record_duration} ! appsink "
+                f"t0. ! queue ! appsink "
+                f"t1. ! queue ! appsink "
             )
+
+            print(gst_pipeline_str)
 
             if enable_recording_saves:
                 os.makedirs(f"{save_fp}/{channel}", exist_ok=True)
@@ -94,5 +96,5 @@ class RTPAudioSource(GstreamerSource):
             pipeline_strings.append(gst_pipeline_str)
             channel += 2
 
-        # Our audios are PCM 24, meaning each audio sample is 3 bytes.
-        super().__init__(pipeline_strings, int((rec_hz * record_duration / 1e9) * 3))
+        # Our audios are signed float 32, from -1 to 1, meaning each audio sample is 4 bytes.
+        super().__init__(pipeline_strings, int((rec_hz * record_duration / 1e9) * 4))
