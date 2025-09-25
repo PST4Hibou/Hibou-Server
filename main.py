@@ -1,9 +1,9 @@
 #!/bin/python3
-from src.audio.processing.noise_reduction import apply_noise_reduction
 from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
 from src.devices.devices import AudioDevice
 from src.settings import SETTINGS
+from src.logger import logger
 import sounddevice as sd
 
 
@@ -18,21 +18,19 @@ def audio_processing(channels: list[float]):
 
 
 if __name__ == "__main__":
-    print("Loaded settings: ", SETTINGS)
-
+    logger.debug(f"Loaded settings: {SETTINGS}")
     devices = AudioDevice.load_devices(SETTINGS.DEVICES_CONFIG_PATH)
 
-    for dev in devices:
-        print(dev)
+    logger.info(f"{len(devices)} devices loaded...")
+    logger.debug(f"Devices: {devices}")
 
     source = RTPAudioSource(
-        can_devices=devices,
+        devices=devices,
         enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
         save_fp=SETTINGS.REC_SAVE_FP,
         record_duration=int(SETTINGS.REC_DURATION),
         rec_hz=int(SETTINGS.REC_HZ),
         stream_latency=int(SETTINGS.STREAM_LATENCY),
-        net_iface=SETTINGS.NET_IFACE,
     )
 
     # source = FileAudioSource(

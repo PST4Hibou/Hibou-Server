@@ -6,7 +6,8 @@
       "ip": "192.168.250.12",
       "port": 5001,
       "multicast_ip": "192.168.250.255",
-      "rtp": 98
+      "rtp": 98,
+      "interface": "enp2s0"
     },
     {
       "name": "HCAN_1",
@@ -14,7 +15,8 @@
       "ip": "192.168.250.11",
       "port": 5004,
       "multicast_ip": "192.168.250.255",
-      "rtp": 98
+      "rtp": 98,
+      "interface": "enp2s0"
     }
   ]
 }

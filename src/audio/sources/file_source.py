@@ -135,7 +135,6 @@ class FileAudioSource(GstreamerSource):
 
                 with sf.SoundFile(fp) as f:
                     # Check samplerate
-                    print(abs(f.samplerate - expected_rate))
                     if abs(f.samplerate - expected_rate) > 50:
                         raise ValueError(
                             f"Invalid samplerate in {fp} (got {f.samplerate}, expected {expected_rate})"

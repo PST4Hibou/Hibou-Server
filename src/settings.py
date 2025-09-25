@@ -15,10 +15,12 @@ Settings = namedtuple(
         "REC_DURATION",
         "REC_HZ",
         "STREAM_LATENCY",
-        "NET_IFACE",
         "DEVICES_CONFIG_PATH",
         "STATIONARY",
         "DEVICE",
+        "LOG_PATH",
+        "LOG_CONF_PATH",
+        "LOG_LEVEL",
     ],
 )
 
@@ -40,10 +42,12 @@ def load_settings() -> Settings:
         REC_DURATION=int(os.getenv("REC_DURATION")) * 10**6,  # ns
         REC_HZ=int(os.getenv("REC_HZ")),
         STREAM_LATENCY=int(os.getenv("STREAM_LATENCY")),
-        NET_IFACE=os.getenv("NET_IFACE"),
         DEVICES_CONFIG_PATH=os.getenv("DEVICES_CONFIG_PATH"),
         STATIONARY=parse_bool(os.getenv("STATIONARY")),
         DEVICE=os.getenv("DEVICE"),
+        LOG_PATH=os.getenv("LOG_PATH"),
+        LOG_CONF_PATH=os.getenv("LOG_CONF_PATH"),
+        LOG_LEVEL=os.getenv("LOG_LEVEL"),
     )
 
 

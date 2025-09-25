@@ -1,3 +1,4 @@
+from noisereduce.torchgate import TorchGate as TG
 from src.settings import SETTINGS
 import noisereduce as nr
 import torch
@@ -15,3 +16,11 @@ def apply_noise_reduction(channels: list[float]):
         )
 
     return channels
+
+
+def apply_noise_reduction_torch(channels: list[float]):
+    tg = TG(sr=SETTINGS.REC_HZ, nonstationary=True).to(torch.device(SETTINGS.DEVICE))
+
+    # Apply Spectral Gate to noisy speech signal
+    # noisy_speech = torch.randn(3, 32000, device=torch.device(SETTINGS.DEVICE))
+    return tg(channels)

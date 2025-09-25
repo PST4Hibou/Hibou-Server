@@ -10,7 +10,14 @@ class AudioDevice:
     """
 
     def __init__(
-        self, name: str, model: str, ip: str, port: int, multicast_ip: str, rtp: int
+        self,
+        name: str,
+        model: str,
+        ip: str,
+        port: int,
+        multicast_ip: str,
+        rtp: int,
+        interface: str,
     ):
         self.name = name
         self.model = model
@@ -18,9 +25,7 @@ class AudioDevice:
         self.port = port
         self.multicast_ip = multicast_ip
         self.rtp = rtp
-
-    def _check_device(self, devices):
-        pass
+        self.interface = interface
 
     @classmethod
     def load_devices(cls, json_path: str):
@@ -36,4 +41,4 @@ class AudioDevice:
         return [cls(**dev) for dev in devices]
 
     def __str__(self):
-        return f"Device: {self.name}, Model: {self.model}, IP: {self.ip}, Port: {self.port}, Multicast IP: {self.multicast_ip}, RTP: {self.rtp}"
+        return f"Device: {self.name}, Model: {self.model}, IP: {self.ip}, Port: {self.port}, Multicast IP: {self.multicast_ip}, RTP: {self.rtp}, Interface: {self.interface}"

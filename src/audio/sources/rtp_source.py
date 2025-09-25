@@ -8,20 +8,19 @@ from src.audio.sources.gstreamer_source import GstreamerSource
 class RTPAudioSource(GstreamerSource):
     def __init__(
         self,
-        can_devices: list[AudioDevice],
+        devices: list[AudioDevice],
         enable_recording_saves: bool,
         save_fp: str,
         record_duration: int,
         rec_hz: int,
         stream_latency: int,
-        net_iface: str,
     ):
         """
         Initialize a GStreamer manager to handle multichannel audio streams
         received via RTP from CAN/Dante audio devices.
 
         Args:
-            can_devices (list[AudioDevice]): List of AudioDevice objects representing
+            devices (list[AudioDevice]): List of AudioDevice objects representing
                 the devices providing RTP audio streams. Each device should
                 specify the port, payload, and multicast IP.
 
@@ -48,7 +47,7 @@ class RTPAudioSource(GstreamerSource):
             - Pipelines are structured to handle multichannel audio with optional
               recording to disk.
         """
-        self.can_devices = can_devices
+        self.devices = devices
         self.enable_recording_saves = enable_recording_saves
         self.save_fp = save_fp
         self.record_duration = record_duration
@@ -58,13 +57,13 @@ class RTPAudioSource(GstreamerSource):
         pipeline_strings = []
 
         channel = 0
-        for dev in self.can_devices:
+        for dev in self.devices:
             port = dev.port
             payload = dev.rtp
             ip_address = dev.multicast_ip
 
             gst_pipeline_str = (
-                f"udpsrc address={ip_address} port={port} multicast-iface={net_iface} "
+                f"udpsrc address={ip_address} port={port} multicast-iface={dev.interface} "
                 f'caps="application/x-rtp, media=(string)audio, clock-rate=(int){rec_hz}, '
                 f'channels=(int)2, encoding-name=(string)L24, payload=(int){payload}" ! '
                 f"rtpjitterbuffer latency={stream_latency} ! "

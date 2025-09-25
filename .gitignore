@@ -138,6 +138,8 @@ recs/
 ./recs
 in/
 ./in
+logs/
+./logs
 
 # Environments
 .env
