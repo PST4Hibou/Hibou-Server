@@ -1,3 +1,5 @@
+"""Configure and initialize the application's logging system."""
+
 import logging.config
 from src.settings import SETTINGS
 
