@@ -1,87 +1,60 @@
-import json
 from pathlib import Path
+from typing import List, Optional
+from dataclasses import asdict
 
+from src.devices.models import Device
+from src.helpers.json import read_json, write_json
 from src.devices.static_checkup import static_checkup
 
 
-class AudioDevice:
-    """
-    Represents a single audio or CAN device with its network and model configuration.
-
-    Attributes:
-        name (str): The name of the device.
-        model (str): The model identifier of the device.
-        ip (str): The IP address of the device.
-        port (int): The network port used by the device.
-        multicast_ip (str): The multicast IP address, if applicable.
-        rtp (int): The RTP (Real-time Transport Protocol) port.
-        interface (str): The network interface used by the device.
-    """
-
-    def __init__(
-        self,
-        name: str,
-        model: str,
-        ip: str,
-        port: int,
-        multicast_ip: str,
-        rtp: int,
-        interface: str,
-    ):
-        """
-        Initialize an AudioDevice instance with network and device parameters.
-
-        Args:
-            name (str): The name of the device.
-            model (str): The model identifier of the device.
-            ip (str): The IP address of the device.
-            port (int): The network port used by the device.
-            multicast_ip (str): The multicast IP address, if applicable.
-            rtp (int): The RTP (Real-time Transport Protocol) port.
-            interface (str): The network interface used by the device.
-        """
-        self.name = name
-        self.model = model
-        self.ip = ip
-        self.port = port
-        self.multicast_ip = multicast_ip
-        self.rtp = rtp
-        self.interface = interface
+class Devices:
 
     @classmethod
-    def load_devices(cls, json_path: str):
+    def load_devices(cls, json_path: Path) -> List[Device]:
         """
-        Load multiple devices from a JSON file and return as AudioDevice instances.
-
-        Args:
-            json_path (str): Path to the JSON file containing device definitions.
-
-        Returns:
-            List[AudioDevice]: A list of AudioDevice instances created from the JSON data.
-
-        Raises:
-            ValueError: If the loaded devices fail static validation.
+        Load devices from a JSON configuration file and return Device instances.
         """
         path = Path(json_path)
-        with path.open("r") as f:
-            data = json.load(f)
+        if not path.exists():
+            raise FileNotFoundError(f"Device configuration file not found: {json_path}")
+
+        data = read_json(path)
         devices = data.get("devices", [])
+        if not devices:
+            raise ValueError("No devices found in the provided JSON file.")
+
         if not static_checkup(devices):
-            raise ValueError("Invalid devices")
-        return [cls(**dev) for dev in devices]
+            raise ValueError("Device configuration failed static validation.")
 
-    def __str__(self):
+        return [Device(**dev) for dev in devices]
+
+    @classmethod
+    def add_device(
+        cls,
+        json_path: Path,
+        new_device: Device,
+        devices: Optional[List[Device]] = None,
+    ) -> List[Device]:
         """
-        Return a human-readable string representation of the device.
+        Add a new device to the configuration, validate, and persist to file.
         """
+        path = Path(json_path)
+        devices = devices or (cls.load_devices(path) if path.exists() else [])
+
+        devices.append(new_device)
+        devices_data = [asdict(dev) for dev in devices]
+
+        if not static_checkup(devices_data):
+            raise ValueError("Updated device configuration failed static validation.")
+
+        write_json(path, {"devices": devices_data})
+        return devices
+
+    @staticmethod
+    def to_string(device: Device) -> str:
+        """Return a human-readable summary of a device."""
         return (
-            f"Device: {self.name}, Model: {self.model}, IP: {self.ip}, "
-            f"Port: {self.port}, Multicast IP: {self.multicast_ip}, "
-            f"RTP: {self.rtp}, Interface: {self.interface}"
+            f"Device: {device.name}, Model: {device.model}, IP: {device.ip}, "
+            f"Port: {device.port}, Multicast IP: {device.multicast_ip}, "
+            f"RTP: {device.rtp}, Interface: {device.interface}"
         )
-
-    def __repr__(self):
-        """
-        Return the official string representation of the device, same as __str__.
-        """
-        return self.__str__()
