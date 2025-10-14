@@ -1,12 +1,13 @@
 #!/bin/python3
-from src.audio.processing.noise_reduction import apply_noise_reduction
+import sounddevice as sd
+import logging
+
 from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
-from src.devices.devices import AudioDevice
+from src.devices.devices import Devices
 from src.settings import SETTINGS
-from src.logger import logger
 from src.arguments import args
-import sounddevice as sd
+from src.logger import logger
 
 
 def play_sample(channels: list[float], channel_id=1):
@@ -21,10 +22,10 @@ def audio_processing(channels: list[float]):
 
 if __name__ == "__main__":
     logger.debug(f"Loaded settings: {SETTINGS}")
-    devices = AudioDevice.load_devices(SETTINGS.DEVICES_CONFIG_PATH)
+    devices = Devices.load_devices(SETTINGS.DEVICES_CONFIG_PATH)
 
-    logger.info(f"{len(devices)} devices loaded...")
-    logger.debug(f"Devices: {devices}")
+    logging.info(f"{len(devices)} devices loaded...")
+    logging.debug(f"Devices: {devices}")
 
     if args.infer_from_folder:
         source = FileAudioSource(

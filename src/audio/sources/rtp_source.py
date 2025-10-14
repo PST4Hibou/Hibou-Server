@@ -1,14 +1,15 @@
+import logging
 import os
 
-from src.devices.devices import AudioDevice
 
 from src.audio.sources.gstreamer_source import GstreamerSource
+from src.devices.models import Device
 
 
 class RTPAudioSource(GstreamerSource):
     def __init__(
         self,
-        devices: list[AudioDevice],
+        devices: list[Device],
         enable_recording_saves: bool,
         save_fp: str,
         record_duration: int,
@@ -20,9 +21,8 @@ class RTPAudioSource(GstreamerSource):
         received via RTP from CAN/Dante audio devices.
 
         Args:
-            devices (list[AudioDevice]): List of AudioDevice objects representing
-                the devices providing RTP audio streams. Each device should
-                specify the port, payload, and multicast IP.
+            devices (list[Device]): List of devices objects representing
+                the devices providing RTP audio streams.
 
             enable_recording_saves (bool): Whether to save incoming streams to disk.
 
@@ -56,6 +56,9 @@ class RTPAudioSource(GstreamerSource):
 
         pipeline_strings = []
 
+        logging.blank_line()
+        logging.debug("Gstreamer pipeline:")
+
         channel = 0
         for dev in self.devices:
             port = dev.port
@@ -78,7 +81,7 @@ class RTPAudioSource(GstreamerSource):
                 f"t1. ! queue ! appsink "
             )
 
-            print(gst_pipeline_str)
+            logging.debug(gst_pipeline_str)
 
             if enable_recording_saves:
                 os.makedirs(f"{save_fp}/{channel}", exist_ok=True)
