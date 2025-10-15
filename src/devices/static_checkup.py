@@ -1,3 +1,6 @@
+from src.devices.supported_devices import supported_devices
+
+
 def check_names(devices: list[dict]) -> bool:
     """
     Ensure all devices have unique 'name' fields.
@@ -55,8 +58,8 @@ def check_port_range(dev: dict) -> None:
     Raises:
         ValueError: If the port is out of the valid range.
     """
-    if not (1 <= dev["port"] <= 65535):
-        raise ValueError(f"Invalid port {dev['port']} for {dev['name']}")
+    if not (1 <= dev.get("port") <= 65535):
+        raise ValueError(f"Invalid port {dev.get('port')} for {dev.get('name')}")
 
 
 def check_rtp_payload(dev: dict) -> None:
@@ -69,8 +72,20 @@ def check_rtp_payload(dev: dict) -> None:
     Raises:
         ValueError: If the RTP payload is out of range.
     """
-    if not (96 <= dev["rtp"] <= 127):
-        raise ValueError(f"Invalid RTP payload {dev['rtp']} for {dev['name']}")
+    rtp = dev.get("rtp")
+    if not (96 <= rtp <= 127):
+        raise ValueError(f"Invalid RTP payload {rtp} for {dev.get('name')}")
+
+
+def check_device_model(dev: dict) -> None:
+    model = dev.get("model")
+    name = dev.get("name", "Unknown device")
+
+    if model not in supported_devices:
+        raise ValueError(
+            f"Invalid device model '{model}' for {name}.\n"
+            f"Supported models: {', '.join(supported_devices)}"
+        )
 
 
 def check_device(dev: dict) -> None:
@@ -83,6 +98,7 @@ def check_device(dev: dict) -> None:
     Raises:
         ValueError: If any validation check fails.
     """
+    check_device_model(dev)
     check_required_fields(dev)
     check_port_range(dev)
     check_rtp_payload(dev)
