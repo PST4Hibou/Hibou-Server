@@ -6,6 +6,8 @@ from typing import List
 import asyncio
 import logging
 
+from src.network.ustils import get_interface_from_ipv4
+
 logger = logging.getLogger("netaudio")
 logger.setLevel(logging.WARNING)
 
@@ -57,6 +59,9 @@ class AVIOAI2Manager(DeviceManager):
     @staticmethod
     def to_device(device: DanteDevice) -> Device:
         """Convert DanteDevice to your internal Device model."""
+        interface = get_interface_from_ipv4(device.ipv4)
+        if not interface:
+            raise ValueError(f"No interface found for IP {device.ipv4}")
         return Device(
             name=device.name,
             model=device.model_id,
@@ -64,5 +69,5 @@ class AVIOAI2Manager(DeviceManager):
             port=5003,
             multicast_ip="239.69.250.255",
             rtp_payload=97,
-            interface="enp0s13f0u1u4",
+            interface=interface,
         )
