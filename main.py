@@ -1,13 +1,14 @@
-#!/bin/python3
-import sounddevice as sd
-import logging
-
 from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
 from src.devices.devices import Devices
 from src.settings import SETTINGS
 from src.arguments import args
 from src.logger import logger
+
+import sounddevice as sd
+import logging
+
+logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
 
 def play_sample(channels: list[float], channel_id=1):
@@ -22,7 +23,8 @@ def audio_processing(channels: list[float]):
 
 if __name__ == "__main__":
     logger.debug(f"Loaded settings: {SETTINGS}")
-    devices = Devices.load_devices(SETTINGS.DEVICES_CONFIG_PATH)
+    # devices = Devices.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
+    devices = Devices.auto_discover()
 
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")

@@ -63,7 +63,7 @@ class RTPAudioSource(GstreamerSource):
         channel = 0
         for dev in self.devices:
             port = dev.port
-            payload = dev.rtp
+            payload = dev.rtp_payload
             ip_address = dev.multicast_ip
 
             gst_pipeline_str = (

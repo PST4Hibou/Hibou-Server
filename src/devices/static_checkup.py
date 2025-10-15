@@ -1,4 +1,9 @@
-from src.devices.supported_devices import supported_devices
+import dataclasses
+
+from src.devices.models import Device
+from dataclasses import fields
+
+SUPPORTED_DEVICES: set[str] = {"DAI2"}
 
 
 def check_names(devices: list[dict]) -> bool:
@@ -29,23 +34,29 @@ def check_ports(devices: list[dict]) -> bool:
     return len(ports) == len(set(ports))
 
 
-def check_required_fields(dev: dict, required=None) -> None:
+def check_required_fields(dev: dict, model_cls=Device) -> None:
     """
-    Check that all required fields are present in a device dictionary.
+    Dynamically check that all required fields from a dataclass are present
+    in a device dictionary.
 
     Args:
         dev (dict): Device dictionary to validate.
-        required (set, optional): Set of required fields. Defaults to
-            {"name", "model", "ip", "port", "multicast_ip", "rtp"}.
+        model_cls (Type): Dataclass defining required fields (default: Device).
 
     Raises:
         ValueError: If any required field is missing.
     """
-    if required is None:
-        required = {"name", "model", "ip", "port", "multicast_ip", "rtp"}
-    missing = required - set(dev.keys())
+    # Extract field names dynamically from the dataclass
+    required_fields = {
+        f.name
+        for f in fields(model_cls)
+        if f.default is dataclasses.MISSING and f.default_factory is dataclasses.MISSING
+    }
+    missing = required_fields - dev.keys()
     if missing:
-        raise ValueError(f"Device {dev.get('name')} is missing fields: {missing}")
+        raise ValueError(
+            f"Device '{dev.get('name', '<unknown>')}' is missing fields: {sorted(missing)}"
+        )
 
 
 def check_port_range(dev: dict) -> None:
@@ -72,19 +83,19 @@ def check_rtp_payload(dev: dict) -> None:
     Raises:
         ValueError: If the RTP payload is out of range.
     """
-    rtp = dev.get("rtp")
-    if not (96 <= rtp <= 127):
-        raise ValueError(f"Invalid RTP payload {rtp} for {dev.get('name')}")
+    payload = dev.get("rtp_payload")
+    if not (96 <= payload <= 127):
+        raise ValueError(f"Invalid RTP payload {payload} for {dev.get('name')}")
 
 
 def check_device_model(dev: dict) -> None:
     model = dev.get("model")
     name = dev.get("name", "Unknown device")
 
-    if model not in supported_devices:
+    if model not in SUPPORTED_DEVICES:
         raise ValueError(
             f"Invalid device model '{model}' for {name}.\n"
-            f"Supported models: {', '.join(supported_devices)}"
+            f"Supported models: {', '.join(SUPPORTED_DEVICES)}"
         )
 
 

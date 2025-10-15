@@ -5,8 +5,8 @@ from dataclasses import dataclass
 class Device:
     name: str
     model: str
-    ip: str
+    ipv4: str
     port: int
     multicast_ip: str
-    rtp: int
+    rtp_payload: int
     interface: str
