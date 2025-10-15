@@ -4,6 +4,7 @@ import os
 
 from src.audio.sources.gstreamer_source import GstreamerSource
 from src.devices.models import Device
+from src.settings import SETTINGS
 
 
 class RTPAudioSource(GstreamerSource):
@@ -73,6 +74,7 @@ class RTPAudioSource(GstreamerSource):
                 f"rtpL24depay ! "
                 f"queue ! "
                 f"audioconvert ! "
+                f"volume volume={SETTINGS.AUDIO_VOLUME} !"
                 f"audio/x-raw, format=F32LE, channels=(int)2 ! "
                 f"deinterleave name=d "
                 f"d.src_0 ! tee name=t0 "

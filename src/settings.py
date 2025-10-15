@@ -21,6 +21,7 @@ class Settings:
     LOG_CONF_PATH: str
     LOG_LEVEL: str
     INFER_FROM_FOLDER: str
+    AUDIO_VOLUME: int
 
 
 def parse_list(value: str):
@@ -46,4 +47,5 @@ SETTINGS = Settings(
     LOG_CONF_PATH=os.getenv("LOG_CONF_PATH"),
     LOG_LEVEL=os.getenv("LOG_LEVEL"),
     INFER_FROM_FOLDER=os.getenv("INFER_FROM_FOLDER"),
+    AUDIO_VOLUME=int(os.getenv("AUDIO_VOLUME")),
 )
