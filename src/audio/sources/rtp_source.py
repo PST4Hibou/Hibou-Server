@@ -94,6 +94,7 @@ class RTPAudioSource(GstreamerSource):
                     f'splitmuxsink location="{save_fp}/{channel}/%d.wav" muxer=wavenc '
                     f"max-size-time={record_duration} "
                     f"t1. ! audioconvert ! audioresample ! "
+                    f"volume volume={SETTINGS.AUDIO_VOLUME} !"
                     f'splitmuxsink location="{save_fp}/{channel + 1}/%d.wav" muxer=wavenc '
                     f"max-size-time={record_duration}"
                 )
