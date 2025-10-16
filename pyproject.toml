@@ -3,7 +3,7 @@ name = "hibou"
 version = "0.1.0"
 description = "Hibou project"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
     "black>=25.9.0",
     "dotenv>=0.9.9",
@@ -13,5 +13,6 @@ dependencies = [
     "sounddevice>=0.5.2",
     "soundfile>=0.13.1",
     "torch>=2.8.0",
-    "psutil"
+    "psutil>=7.1.0",
+    "pyshark>=0.6"
 ]

@@ -1,3 +1,5 @@
+from src.network.helpers.interface import get_interface_from_ipv4
+from src.network.multicast import get_multicast_stream_info
 from src.devices.managers.base import DeviceManager
 from netaudio import DanteBrowser, DanteDevice
 from src.devices.models import Device
@@ -6,7 +8,6 @@ from typing import List
 import asyncio
 import logging
 
-from src.network.ustils import get_interface_from_ipv4
 
 logger = logging.getLogger("netaudio")
 logger.setLevel(logging.WARNING)
@@ -62,12 +63,13 @@ class AVIOAI2Manager(DeviceManager):
         interface = get_interface_from_ipv4(device.ipv4)
         if not interface:
             raise ValueError(f"No interface found for IP {device.ipv4}")
+        res = get_multicast_stream_info(interface, device.ipv4)
         return Device(
             name=device.name,
             model=device.model_id,
             ipv4=device.ipv4,
-            port=5003,
-            multicast_ip="239.69.250.255",
-            rtp_payload=97,
+            port=res.get("multicast_port"),
+            multicast_ip=res.get("multicast_ip"),
+            rtp_payload=res.get("rtp_payload"),
             interface=interface,
         )

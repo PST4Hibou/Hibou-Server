@@ -8,9 +8,6 @@ from pathlib import Path
 
 import logging
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
 
 class Devices:
     """High-level orchestrator for discovering, loading, and managing audio devices."""
@@ -37,7 +34,7 @@ class Devices:
             raise ValueError("Device configuration failed static validation.")
 
         devices = [Device(**dev) for dev in devices_data]
-        logger.info("Loaded %d devices from %s", len(devices), json_path)
+        logging.info("Loaded %d devices from %s", len(devices), json_path)
         return devices
 
     @classmethod
@@ -62,7 +59,7 @@ class Devices:
             raise ValueError("Updated device configuration failed static validation.")
 
         write_json(path, {"devices": devices_data})
-        logger.info("Added device '%s' and updated configuration.", new_device.name)
+        logging.info("Added device '%s' and updated configuration.", new_device.name)
         return devices
 
     @classmethod
@@ -73,18 +70,21 @@ class Devices:
         discovered_devices: List[Device] = []
 
         for manager_cls in cls._SUPPORTED_MANAGERS:
-            logger.info("Running auto-discovery for %s...", manager_cls.__name__)
+            logging.blank_line()
+            logging.info("Running auto-discovery for %s...", manager_cls.__name__)
             try:
                 devices = manager_cls.scan_devices()
                 discovered_devices.extend(devices)
-                logger.info(
+                logging.info(
                     "Discovered %d devices via %s.", len(devices), manager_cls.__name__
                 )
             except Exception as e:
-                logger.exception("Discovery failed for %s: %s", manager_cls.__name__, e)
+                logging.exception(
+                    "Discovery failed for %s: %s", manager_cls.__name__, e
+                )
 
         if not discovered_devices:
-            logger.warning("No devices discovered across all managers.")
+            logging.warning("No devices discovered across all managers.")
 
         return discovered_devices
 
