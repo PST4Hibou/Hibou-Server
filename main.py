@@ -1,30 +1,36 @@
+from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram
 from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
+from src.audio.models.channel import Channel
+from src.audio.energy import compute_energy
 from src.devices.devices import Devices
 from src.settings import SETTINGS
 from src.arguments import args
 from src.logger import logger
 
-import sounddevice as sd
 import logging
 
 logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
-
-def play_sample(channels: list[float], channel_id=1):
-    sd.play(channels[channel_id], samplerate=SETTINGS.REC_HZ, blocking=False)
+spectro = None
 
 
-def audio_processing(channels: list[float]):
+def audio_processing(channels: list[Channel]):
+    global spectro
+
     # enhanced_audio = apply_noise_reduction(channels)
+    # play_sample(channels, 0)  # Only for debug purposes
 
-    play_sample(channels, 0)  # Only for debug purposes
+    energies = [compute_energy(channel) for channel in channels]
+
+    spectro.update(energies)
 
 
 if __name__ == "__main__":
     logger.debug(f"Loaded settings: {SETTINGS}")
-    # devices = Devices.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
-    devices = Devices.auto_discover()
+    devices = Devices.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
+
+    spectro = ChannelTimeSpectrogram(len(devices) * 2, SETTINGS.REC_DURATION / 1000)
 
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")
@@ -48,7 +54,7 @@ if __name__ == "__main__":
             stream_latency=int(SETTINGS.STREAM_LATENCY),
         )
 
-    # Every SETTINGS.REC_DURATION seconds, this function is called
+    # Every SETTING.REC_DURATION seconds, this function is called
     source.set_callback(audio_processing)
 
     try:
