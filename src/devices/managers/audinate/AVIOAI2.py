@@ -9,10 +9,6 @@ import asyncio
 import logging
 
 
-logger = logging.getLogger("netaudio")
-logger.setLevel(logging.WARNING)
-
-
 class AVIOAI2Manager(DeviceManager):
     """Manager for Audinate AVIO AI2 devices."""
 
@@ -22,7 +18,7 @@ class AVIOAI2Manager(DeviceManager):
         try:
             return asyncio.run(async_fn())
         except Exception as e:
-            logger.exception("Error while running asyncio function: %s", e)
+            logging.exception("Error while running asyncio function: %s", e)
             return []
 
     @staticmethod
@@ -32,26 +28,26 @@ class AVIOAI2Manager(DeviceManager):
         discovered = await dante_browser.get_devices()
 
         if not discovered:
-            logger.warning("No Dante devices discovered.")
+            logging.warning("No Dante devices discovered.")
             return []
 
         await asyncio.gather(*(device.get_controls() for device in discovered.values()))
 
         devices = list(discovered.values())
-        logger.info("Discovered %d Dante devices", len(devices))
+        logging.info("Discovered %d Dante devices", len(devices))
         return devices
 
     @classmethod
     def scan_devices(cls) -> List[Device]:
         """Synchronous wrapper for asynchronous Dante discovery."""
-        logger.debug("Starting synchronous device discovery for AVIOAI2.")
+        logging.debug("Starting synchronous device discovery for AVIOAI2.")
         dante_devices = cls._run(cls._scan_devices)
         if not dante_devices:
-            logger.warning("No devices returned from async discovery.")
+            logging.warning("No devices returned from async discovery.")
             return []
 
         converted_devices = [cls.to_device(d) for d in dante_devices]
-        logger.info(
+        logging.info(
             "Converted %d Dante devices to internal Device objects",
             len(converted_devices),
         )

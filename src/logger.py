@@ -19,3 +19,8 @@ def blank_line_module(log_level="DEBUG", how_many_lines=1):
 
 logging.blank_line = blank_line_module
 logger = logging.getLogger(__name__)
+
+# external logger
+logging.getLogger("asyncio").setLevel(logging.CRITICAL)
+logging.getLogger("matplotlib").setLevel(logging.CRITICAL)
+logging.getLogger("netaudio").setLevel(logging.CRITICAL)

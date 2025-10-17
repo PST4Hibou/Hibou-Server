@@ -10,8 +10,6 @@ from src.logger import logger
 
 import logging
 
-logging.getLogger("asyncio").setLevel(logging.CRITICAL)
-
 spectro = None
 
 
@@ -23,12 +21,13 @@ def audio_processing(channels: list[Channel]):
 
     energies = [compute_energy(channel) for channel in channels]
 
-    spectro.update(energies)
+    # spectro.update(energies) #Only for debug purposes
 
 
 if __name__ == "__main__":
     logger.debug(f"Loaded settings: {SETTINGS}")
     devices = Devices.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
+    # devices = Devices.auto_discover()
 
     spectro = ChannelTimeSpectrogram(len(devices) * 2, SETTINGS.REC_DURATION / 1000)
 

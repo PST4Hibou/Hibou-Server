@@ -1,22 +1,13 @@
 {
   "devices": [
     {
-      "name": "HCAN_0",
-      "model": "hasseb",
-      "ip": "192.168.250.12",
-      "port": 5001,
-      "multicast_ip": "192.168.250.255",
-      "rtp": 98,
-      "interface": "enp2s0"
-    },
-    {
-      "name": "HCAN_1",
-      "model": "hasseb",
-      "ip": "192.168.250.11",
-      "port": 5004,
-      "multicast_ip": "192.168.250.255",
-      "rtp": 98,
-      "interface": "enp2s0"
+      "name": "AVIOAI2-5575d5",
+      "model": "DAI2",
+      "ipv4": "192.168.250.14",
+      "port": 5002,
+      "multicast_ip": "239.69.250.255",
+      "rtp_payload": 97,
+      "interface": "enp0s13f0u1u4"
     }
   ]
 }
