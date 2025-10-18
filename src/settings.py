@@ -1,10 +1,26 @@
 from dataclasses import dataclass
 from dotenv import load_dotenv
+
+import logging
+import shutil
 import os
 
+
+current_file_path = os.path.abspath(__file__)
+script_dir = os.path.dirname(current_file_path)
+project_root = os.path.abspath(os.path.join(script_dir, ".."))
+
+# Paths
+source_file = os.path.join(project_root, ".env.exemple")
+target_file = os.path.join(project_root, ".env")
+
+# Copy .env if it does not exist
+if not os.path.exists(target_file) and os.path.exists(source_file):
+    shutil.copy2(source_file, target_file)
+    logging.info(f"Copied {source_file} → {target_file}")
+
 if not load_dotenv():
-    print("No .env file found. Please create one.")
-    exit(1)
+    raise FileNotFoundError("Failed to load .env file.")
 
 
 @dataclass
