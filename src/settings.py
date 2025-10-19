@@ -40,6 +40,7 @@ class Settings:
     AUDIO_VOLUME: int
     AUDIO_PLAYBACK: bool = False
     AUDIO_ENERGY_SPECTRUM: bool = False
+    AUDIO_RADAR: bool = False
 
 
 def parse_list(value: str):

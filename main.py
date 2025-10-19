@@ -2,6 +2,7 @@ from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
 from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
+from src.audio.debug.radar import RadarPlot
 from src.audio.energy import compute_energy
 from src.devices.devices import Devices
 from src.audio.play import play_sample
@@ -18,6 +19,8 @@ class AudioProcess:
     def __init__(self, nb_channels, frame_duration_s, angle_coverage):
         if SETTINGS.AUDIO_ENERGY_SPECTRUM:  # Only for debug purposes
             self.spectro = ChannelTimeSpectrogram(nb_channels, frame_duration_s)
+        if SETTINGS.AUDIO_RADAR:  # Only for debug purposes
+            self.radar = RadarPlot()
         self.angle_estimator = AngleOfArrivalEstimator(nb_channels, angle_coverage)
 
     def process(self, channels):
@@ -27,8 +30,8 @@ class AudioProcess:
         if SETTINGS.AUDIO_ENERGY_SPECTRUM:  # Only for debug purposes
             self.spectro.update(energies)
 
-        angle = self.angle_estimator.estimate(energies)
-        print(f"Angle: {angle:.2f}°")
+        if SETTINGS.AUDIO_RADAR:
+            self.radar.update(3, 0)
 
         if SETTINGS.AUDIO_PLAYBACK:  # Only for debug purposes
             play_sample(channels, 0)
