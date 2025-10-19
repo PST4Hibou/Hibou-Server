@@ -1,4 +1,6 @@
 import argparse
+
+from src.doctor import run_doctor
 from src.settings import SETTINGS
 
 parser = argparse.ArgumentParser(
@@ -11,6 +13,7 @@ parser.add_argument("--infer-from-folder", help="Use a folder to infer", type=st
 parser.add_argument(
     "--log-level", help="Change log level from ERROR to DEBUG", type=str
 )
+parser.add_argument("--doctor", action="store_true", help="Run doctor")
 
 args = parser.parse_args()
 
@@ -20,3 +23,5 @@ if args.infer_from_folder:
     SETTINGS.INFER_FROM_FOLDER = args.infer_from_folder
 if args.log_level:
     SETTINGS.LOG_LEVEL = args.log_level
+if args.doctor:
+    run_doctor()
