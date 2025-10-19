@@ -1,5 +1,9 @@
 from src.settings import SETTINGS
 import logging.config
+import os
+
+# Make sure the logs directory exists
+os.makedirs(os.path.dirname(SETTINGS.LOG_PATH), exist_ok=True)
 
 logging.config.fileConfig(
     SETTINGS.LOG_CONF_PATH,
