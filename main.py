@@ -9,7 +9,9 @@ from src.settings import SETTINGS
 from src.arguments import args
 from src.logger import logger
 
+import datetime
 import logging
+import os
 
 
 class AudioProcess:
@@ -40,12 +42,16 @@ if __name__ == "__main__":
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")
 
+    now = datetime.datetime.now()
+    recs_folder_name = os.path.join(
+        SETTINGS.REC_SAVE_FP, f"{now.strftime('%d-%m-%Y_%H:%M:%S')}"
+    )
     if args.infer_from_folder:
         source = FileAudioSource(
             folder_path=args.infer_from_folder,
             channel_prefix="ch_",
             channels_count=4,
-            save_fp=SETTINGS.REC_SAVE_FP,
+            save_fp=recs_folder_name,
             enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
             record_duration=SETTINGS.REC_DURATION,
         )
@@ -53,7 +59,7 @@ if __name__ == "__main__":
         source = RTPAudioSource(
             devices=devices,
             enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
-            save_fp=SETTINGS.REC_SAVE_FP,
+            save_fp=recs_folder_name,
             record_duration=int(SETTINGS.REC_DURATION),
             rec_hz=int(SETTINGS.REC_HZ),
             stream_latency=int(SETTINGS.STREAM_LATENCY),
