@@ -16,4 +16,5 @@ dependencies = [
     "psutil>=7.1.0",
     "pyshark>=0.6",
     "rich>=14.2.0",
+    "colorlog>=6.10.1",
 ]
