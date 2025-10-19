@@ -53,18 +53,21 @@ def parse_bool(value: str) -> bool:
     return str(value).strip().lower() in ("true", "1", "yes")
 
 
-SETTINGS = Settings(
-    ENABLE_REC_SAVE=parse_bool(os.getenv("ENABLE_REC_SAVE")),
-    REC_SAVE_FP=os.getenv("REC_SAVE_FP"),
-    REC_DURATION=int(os.getenv("REC_DURATION")) * 10**6,  # ns
-    REC_HZ=int(os.getenv("REC_HZ")),
-    STREAM_LATENCY=int(os.getenv("STREAM_LATENCY")),
-    DEVICES_CONFIG_PATH=os.getenv("DEVICES_CONFIG_PATH"),
-    STATIONARY=parse_bool(os.getenv("STATIONARY")),
-    DEVICE=os.getenv("DEVICE"),
-    LOG_PATH=os.getenv("LOG_PATH"),
-    LOG_CONF_PATH=os.getenv("LOG_CONF_PATH"),
-    LOG_LEVEL=os.getenv("LOG_LEVEL"),
-    INFER_FROM_FOLDER=os.getenv("INFER_FROM_FOLDER"),
-    AUDIO_VOLUME=int(os.getenv("AUDIO_VOLUME")),
-)
+try:
+    SETTINGS = Settings(
+        ENABLE_REC_SAVE=parse_bool(os.getenv("ENABLE_REC_SAVE")),
+        REC_SAVE_FP=os.getenv("REC_SAVE_FP"),
+        REC_DURATION=int(os.getenv("REC_DURATION")) * 10**6,  # ns
+        REC_HZ=int(os.getenv("REC_HZ")),
+        STREAM_LATENCY=int(os.getenv("STREAM_LATENCY")),
+        DEVICES_CONFIG_PATH=os.getenv("DEVICES_CONFIG_PATH"),
+        STATIONARY=parse_bool(os.getenv("STATIONARY")),
+        DEVICE=os.getenv("DEVICE"),
+        LOG_PATH=os.getenv("LOG_PATH"),
+        LOG_CONF_PATH=os.getenv("LOG_CONF_PATH"),
+        LOG_LEVEL=os.getenv("LOG_LEVEL"),
+        INFER_FROM_FOLDER=os.getenv("INFER_FROM_FOLDER"),
+        AUDIO_VOLUME=int(os.getenv("AUDIO_VOLUME")),
+    )
+except TypeError as e:
+    raise ValueError(f"Invalid value in .env: {e}")
