@@ -63,7 +63,7 @@ class AVIOAI2Manager(DeviceManager):
         return Device(
             name=device.name,
             model=device.model_id,
-            ipv4=device.ipv4,
+            ipv4=str(device.ipv4),
             port=res.get("multicast_port"),
             multicast_ip=res.get("multicast_ip"),
             rtp_payload=res.get("rtp_payload"),
