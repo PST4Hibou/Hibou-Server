@@ -79,8 +79,8 @@ class RTPAudioSource(GstreamerSource):
                 f"deinterleave name=d "
                 f"d.src_0 ! tee name=t0 "
                 f"d.src_1 ! tee name=t1 "
-                f"t0. ! queue ! appsink "
-                f"t1. ! queue ! appsink "
+                f"t0. ! queue ! appsink name=appsink_{channel} "
+                f"t1. ! queue ! appsink name=appsink_{channel + 1}"
             )
 
             logging.debug(gst_pipeline_str)

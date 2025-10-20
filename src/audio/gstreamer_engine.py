@@ -5,6 +5,7 @@ from gi.repository import Gst
 
 
 class GStreamerEngine:
+
     def __init__(self, pipelines_strs: list[str], on_sample):
         # Setting GST's logging level to output.
         # see https://gstreamer.freedesktop.org/documentation/tutorials/basic/debugging-tools.html
@@ -16,9 +17,14 @@ class GStreamerEngine:
         self._pipelines = []
         self._on_sample = on_sample
         self._sinks = []
-
-        self._create_pipelines(pipelines_strs)
-        self._connect_sinks()
+        try:
+            self._create_pipelines(pipelines_strs)
+            self._connect_sinks()
+        except Exception:
+            # Clean up any created pipelines
+            for p in self._pipelines:
+                p.set_state(Gst.State.NULL)
+            raise
 
     def _create_pipelines(self, pipelines_strs):
         for pipeline_str in pipelines_strs:
@@ -29,8 +35,9 @@ class GStreamerEngine:
             self._pipelines.append(pipeline)
 
     def _connect_sinks(self):
-        channel = 0
-        for pipeline in self._pipelines:
+        pipelines = {}
+
+        for pipeline_idx, pipeline in enumerate(self._pipelines):
             it = pipeline.iterate_elements()
             while True:
                 res, elem = it.next()
@@ -38,22 +45,57 @@ class GStreamerEngine:
                     it.resync()
                     continue
                 if res == Gst.IteratorResult.ERROR:
-                    raise RuntimeError("Failed to iterate pipeline")
+                    raise RuntimeError(f"Failed to iterate pipeline #{pipeline_idx}")
                 if res == Gst.IteratorResult.DONE:
                     break
+
+                # Check if this element is an appsink
                 if elem.get_factory().get_name() == "appsink":
+                    name = elem.get_name()
+                    parts = name.split("_")
+
+                    if len(parts) != 2 or not parts[1].isdigit():
+                        raise ValueError(
+                            f"Invalid appsink name '{name}'. Expected format 'appsink_<channel_id>'."
+                        )
+
+                    channel = int(parts[1])
+
+                    if channel in pipelines:
+                        raise ValueError(
+                            f"Duplicate channel id {channel} found in pipeline #{pipeline_idx} "
+                            f"(appsink name='{name}')"
+                        )
+
+                    # Set sink properties
                     elem.set_property("emit-signals", True)
                     elem.set_property("sync", False)
+
+                    # Connect signal callback
                     elem.connect("new-sample", self._handle_new_sample, channel)
 
-                    self._sinks.append(elem)
-                    channel += 1
+                    # Register in dict for sorting later
+                    pipelines[channel] = elem
+
+        # Sort channels to ensure deterministic order
+        for channel in sorted(pipelines.keys()):
+            self._sinks.append(pipelines[channel])
 
     def _handle_new_sample(self, sink, channel_id):
         sample = sink.emit("pull-sample")
+        if not sample:
+            return Gst.FlowReturn.ERROR
         buf = sample.get_buffer()
-        data = buf.extract_dup(0, buf.get_size())
-        self._on_sample(channel_id, data)  # pass raw data upward
+        if not buf:
+            return Gst.FlowReturn.ERROR
+
+        try:
+            data = buf.extract_dup(0, buf.get_size())
+            self._on_sample(channel_id, data)  # pass raw data upward
+        except Exception as e:
+            # Log error or handle appropriately
+            print(f"Error in on_sample callback for channel {channel_id}: {e}")
+            return Gst.FlowReturn.ERROR
 
         return Gst.FlowReturn.OK
 
