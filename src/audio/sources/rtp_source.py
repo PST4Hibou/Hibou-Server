@@ -75,6 +75,7 @@ class RTPAudioSource(GstreamerSource):
                 f"queue ! "
                 f"audioconvert ! "
                 f"volume volume={SETTINGS.AUDIO_VOLUME} !"
+                f"volume volume={SETTINGS.AUDIO_VOLUME} !"
                 f"audio/x-raw, format=F32LE, channels=(int)2 ! "
                 f"deinterleave name=d "
                 f"d.src_0 ! tee name=t0 "

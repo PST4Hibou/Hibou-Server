@@ -38,9 +38,13 @@ class Settings:
     LOG_LEVEL: str
     INFER_FROM_FOLDER: str
     AUDIO_VOLUME: int
+    PTZ_USERNAME: str
+    PTZ_PASSWORD: str
+    PTZ_HOST: str
+    AUDIO_ANGLE_COVERAGE: int
     AUDIO_PLAYBACK: bool = False
-    AUDIO_ENERGY_SPECTRUM: bool = False
-    AUDIO_RADAR: bool = False
+    AUDIO_ENERGY_SPECTRUM: bool = True
+    AUDIO_RADAR: bool = True
 
 
 def parse_list(value: str):
@@ -68,6 +72,10 @@ try:
         LOG_LEVEL=os.getenv("LOG_LEVEL"),
         INFER_FROM_FOLDER=os.getenv("INFER_FROM_FOLDER"),
         AUDIO_VOLUME=int(os.getenv("AUDIO_VOLUME")),
+        PTZ_USERNAME=os.getenv("PTZ_USERNAME"),
+        PTZ_PASSWORD=os.getenv("PTZ_PASSWORD"),
+        PTZ_HOST=os.getenv("PTZ_HOST"),
+        AUDIO_ANGLE_COVERAGE=int(os.getenv("AUDIO_ANGLE_COVERAGE")),
     )
 except TypeError as e:
     raise ValueError(f"Invalid value in .env: {e}")

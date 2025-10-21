@@ -17,4 +17,5 @@ dependencies = [
     "pyshark>=0.6",
     "rich>=14.2.0",
     "colorlog>=6.10.1",
+    "hikvisionapi>=0.3.2",
 ]

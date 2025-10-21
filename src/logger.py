@@ -1,4 +1,5 @@
 from src.settings import SETTINGS
+
 import logging.config
 import os
 import colorlog
@@ -56,3 +57,7 @@ logger = logging.getLogger(__name__)
 logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 logging.getLogger("matplotlib").setLevel(logging.CRITICAL)
 logging.getLogger("netaudio").setLevel(logging.CRITICAL)
+logging.getLogger("charset_normalizer").setLevel(logging.CRITICAL)
+logging.getLogger("fsspec.http").setLevel(logging.CRITICAL)
+logging.getLogger("httpx").setLevel(logging.CRITICAL)
+logging.getLogger("requests").setLevel(logging.CRITICAL)

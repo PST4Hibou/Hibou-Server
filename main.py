@@ -9,6 +9,7 @@ from src.audio.play import play_sample
 from src.settings import SETTINGS
 from src.arguments import args
 from src.logger import logger
+from src.ptz.ptz import PTZ
 
 import datetime
 import logging
@@ -22,6 +23,7 @@ class AudioProcess:
         if SETTINGS.AUDIO_RADAR:  # Only for debug purposes
             self.radar = RadarPlot()
         self.angle_estimator = AngleOfArrivalEstimator(nb_channels, angle_coverage)
+        self.ptz = PTZ(SETTINGS.PTZ_HOST, SETTINGS.PTZ_USERNAME, SETTINGS.PTZ_PASSWORD)
 
     def process(self, channels):
         # enhanced_audio = apply_noise_reduction(channels)
@@ -30,8 +32,12 @@ class AudioProcess:
         if SETTINGS.AUDIO_ENERGY_SPECTRUM:  # Only for debug purposes
             self.spectro.update(energies)
 
+        angle = self.angle_estimator.estimate(energies)
+
+        self.ptz.set_angle(angle)
+
         if SETTINGS.AUDIO_RADAR:
-            self.radar.update(3, 0)
+            self.radar.update(angle, max(energies))
 
         if SETTINGS.AUDIO_PLAYBACK:  # Only for debug purposes
             play_sample(channels, 0)
@@ -72,7 +78,7 @@ if __name__ == "__main__":
     audio = AudioProcess(
         nb_channels=len(devices) * 2,
         frame_duration_s=SETTINGS.REC_DURATION / 1000,
-        angle_coverage=90,
+        angle_coverage=SETTINGS.AUDIO_ANGLE_COVERAGE,
     )
     source.set_callback(audio.process)
 

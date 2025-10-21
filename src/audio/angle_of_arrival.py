@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 
 
@@ -8,6 +10,12 @@ class AngleOfArrivalEstimator:
         self.smoothing = smoothing
         self.theta_smooth = None  # last smoothed angle
 
+        self.angles_deg = np.linspace(
+            0, self.angle_coverage, self.nb_channels, endpoint=False
+        )
+        logging.debug(f"Angles: {self.angles_deg}")
+        self.angles_rad = np.deg2rad(self.angles_deg)
+
     def estimate(self, energies):
         energies = np.array(energies, dtype=float)
         if np.sum(energies) < 1e-8:
@@ -16,15 +24,9 @@ class AngleOfArrivalEstimator:
         # Normalize
         weights = energies / np.sum(energies)
 
-        # Channel angles
-        angles_deg = np.linspace(
-            0, self.angle_coverage, self.nb_channels, endpoint=False
-        )
-        angles_rad = np.deg2rad(angles_deg)
-
         # Weighted vector sum
-        X = np.sum(weights * np.cos(angles_rad))
-        Y = np.sum(weights * np.sin(angles_rad))
+        X = np.sum(weights * np.cos(self.angles_rad))
+        Y = np.sum(weights * np.sin(self.angles_rad))
         theta_est = np.rad2deg(np.arctan2(Y, X)) % 360
 
         # Temporal smoothing
