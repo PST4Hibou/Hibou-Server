@@ -66,7 +66,7 @@ class ChannelTimeSpectrogram:
         self.im.set_data(self.data)
 
         # Optional: set color scale
-        self.im.set_clim(0, 5)
+        self.im.set_clim(0, 200)
 
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
