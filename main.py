@@ -23,7 +23,13 @@ class AudioProcess:
         if SETTINGS.AUDIO_RADAR:  # Only for debug purposes
             self.radar = RadarPlot()
         self.angle_estimator = AngleOfArrivalEstimator(nb_channels, angle_coverage)
-        self.ptz = PTZ(SETTINGS.PTZ_HOST, SETTINGS.PTZ_USERNAME, SETTINGS.PTZ_PASSWORD)
+        self.ptz = PTZ(
+            SETTINGS.PTZ_HOST,
+            SETTINGS.PTZ_USERNAME,
+            SETTINGS.PTZ_PASSWORD,
+            SETTINGS.PTZ_START_AZIMUTH,
+            SETTINGS.PTZ_END_AZIMUTH,
+        )
 
     def process(self, channels):
         # enhanced_audio = apply_noise_reduction(channels)
@@ -34,7 +40,7 @@ class AudioProcess:
 
         angle = self.angle_estimator.estimate(energies)
 
-        self.ptz.set_angle(angle)
+        self.ptz.go_to_angle(angle)
 
         if SETTINGS.AUDIO_RADAR:
             self.radar.update(angle, max(energies))

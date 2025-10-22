@@ -41,6 +41,8 @@ class Settings:
     PTZ_USERNAME: str
     PTZ_PASSWORD: str
     PTZ_HOST: str
+    PTZ_START_AZIMUTH: int
+    PTZ_END_AZIMUTH: int
     AUDIO_ANGLE_COVERAGE: int
     AUDIO_PLAYBACK: bool = False
     AUDIO_ENERGY_SPECTRUM: bool = True
@@ -76,6 +78,8 @@ try:
         PTZ_PASSWORD=os.getenv("PTZ_PASSWORD"),
         PTZ_HOST=os.getenv("PTZ_HOST"),
         AUDIO_ANGLE_COVERAGE=int(os.getenv("AUDIO_ANGLE_COVERAGE")),
+        PTZ_START_AZIMUTH=int(os.getenv("PTZ_START_AZIMUTH")),
+        PTZ_END_AZIMUTH=int(os.getenv("PTZ_END_AZIMUTH")),
     )
 except TypeError as e:
     raise ValueError(f"Invalid value in .env: {e}")
