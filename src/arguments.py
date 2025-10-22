@@ -1,7 +1,8 @@
-import argparse
-
-from src.doctor import run_doctor
+from src.ptz.calibration import start_ptz_calibration
 from src.settings import SETTINGS
+from src.doctor import run_doctor
+
+import argparse
 
 parser = argparse.ArgumentParser(
     prog="Hibou",
@@ -14,6 +15,9 @@ parser.add_argument(
     "--log-level", help="Change log level from ERROR to DEBUG", type=str
 )
 parser.add_argument("--doctor", action="store_true", help="Run doctor")
+parser.add_argument(
+    "--ptz-calibration", action="store_true", help="Run PTZ calibration"
+)
 
 args = parser.parse_args()
 
@@ -25,3 +29,5 @@ if args.log_level:
     SETTINGS.LOG_LEVEL = args.log_level
 if args.doctor:
     run_doctor()
+if args.ptz_calibration:
+    start_ptz_calibration()
