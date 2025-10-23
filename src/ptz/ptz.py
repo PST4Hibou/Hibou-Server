@@ -7,13 +7,30 @@ import math
 class PTZ:
     """
     Provides an interface to control a PTZ (Pan-Tilt-Zoom) camera.
-
     This class is designed to manage and control PTZ cameras, allowing movement
     across different axes (pan, tilt) and zoom levels. It supports absolute
     positioning, continuous movement, and status retrieval. The class requires
     authentication and establishes a connection to the PTZ client for issuing
     commands.
     """
+
+    # Speed constraints
+    MIN_SPEED = 1
+    MAX_SPEED = 7
+    SPEED_MULTIPLIER = 15
+
+    # Valid axes for movement
+    VALID_AXES = {"X", "Y", "XY"}
+    DEFAULT_AXIS = "XY"
+
+    # Camera channel
+    CHANNEL_ID = 1
+
+    # XML content type
+    XML_CONTENT_TYPE = "application/xml"
+
+    # Angle tolerance for movement
+    ANGLE_TOLERANCE = 2
 
     def __init__(
         self,
@@ -27,10 +44,14 @@ class PTZ:
         self._username = username
         self._password = password
         self._client = None
-        self._MIN_SPEED = 1
-        self._MAX_SPEED = 7
         self._start_azimuth = start_azimuth
         self._end_azimuth = end_azimuth
+
+        self._current_elevation = 0
+        self._current_azimuth = 0
+        self._current_zoom = 0
+        self._current_x_angle = 0
+        self._status: dict | None = None
 
         if not username and not password:
             logging.warning("No username or password provided for PTZ connection.")
@@ -45,13 +66,43 @@ class PTZ:
             logging.error(f"Failed to connect to PTZ camera at {self._host}: {e}")
             raise ConnectionError(f"PTZ connection failed: {e}")
 
-    def set_position(self, elevation: float, azimuth: float, zoom: float) -> bool:
-        """
-        Move the camera to an absolute PTZ position.
-        """
+    def _ensure_client_initialized(self) -> bool:
+        """Check if the PTZ client is initialized and log an error if not."""
         if not self._client:
             logging.error("PTZ client not initialized.")
             return False
+        return True
+
+    @staticmethod
+    def _build_absolute_position_xml(
+        elevation: float, azimuth: float, zoom: float
+    ) -> str:
+        """Build XML command for absolute positioning."""
+        return f"""
+        <PTZData>
+            <AbsoluteHigh>
+                <elevation>{elevation}</elevation>
+                <azimuth>{azimuth}</azimuth>
+                <absoluteZoom>{zoom}</absoluteZoom>
+            </AbsoluteHigh>
+        </PTZData>
+        """.strip()
+
+    @staticmethod
+    def _build_continuous_movement_xml(pan: int, tilt: int) -> str:
+        """Build XML command for continuous movement."""
+        return f"<PTZData><pan>{pan}</pan><tilt>{tilt}</tilt></PTZData>"
+
+    def set_absolute_ptz_position(
+        self, elevation: float, azimuth: float, zoom: float
+    ) -> bool:
+        """
+        Move the camera to an absolute PTZ position.
+        """
+        if not self._ensure_client_initialized():
+            return False
+
+        xml_command = self._build_absolute_position_xml(elevation, azimuth, zoom)
 
         xml_absolute = f"""
         <PTZData>
@@ -62,13 +113,16 @@ class PTZ:
             </AbsoluteHigh>
         </PTZData>
         """.strip()
-
         try:
-            self._client.PTZCtrl.channels[1].absolute(
+            self._client.PTZCtrl.channels[self.CHANNEL_ID].absolute(
                 method="put",
                 data=xml_absolute,
-                headers={"Content-Type": "application/xml"},
+                headers={"Content-Type": self.XML_CONTENT_TYPE},
             )
+
+            self._current_elevation = elevation
+            self._current_azimuth = azimuth
+            self._current_zoom = zoom
 
             return True
 
@@ -76,7 +130,7 @@ class PTZ:
             logging.error(f"Error sending PTZ absolute command: {e}")
             return False
 
-    def _send_continuous_ptz_command(self, pan, tilt) -> bool:
+    def _send_continuous_ptz_command(self, pan: int, tilt: int) -> bool:
         """
         Sends a continuous pan-tilt-zoom (PTZ) command to the PTZ client.
 
@@ -92,29 +146,56 @@ class PTZ:
         Returns:
             bool: True if the command was sent successfully, otherwise False.
         """
-        if not self._client:
-            logging.error("PTZ client not initialized.")
+        if not self._ensure_client_initialized():
             return False
 
-        xml_absolute = f"""
-            <PTZData><pan>{pan}</pan><tilt>{tilt}</tilt></PTZData>
-        """.strip()
+        xml_command = self._build_continuous_movement_xml(pan, tilt)
 
         try:
-            self._client.PTZCtrl.channels[1].continuous(
+            self._client.PTZCtrl.channels[self.CHANNEL_ID].continuous(
                 method="put",
-                data=xml_absolute,
-                headers={"Content-Type": "application/xml"},
+                data=xml_command,
+                headers={"Content-Type": self.XML_CONTENT_TYPE},
             )
 
             return True
 
         except Exception as e:
-            logging.error(f"Error sending PTZ absolute command: {e}")
+            logging.error(f"Error sending PTZ continuous command: {e}")
             return False
 
+    def _normalize_speed(self, speed: int) -> int:
+        """Normalize speed value to valid range and apply multiplier."""
+        return max(self.MIN_SPEED, min(speed, self.MAX_SPEED)) * self.SPEED_MULTIPLIER
+
+    def _validate_axis(self, axis: str) -> str:
+        """Validate and normalize axis parameter."""
+        normalized_axis = axis.upper()
+        if normalized_axis not in self.VALID_AXES:
+            logging.warning(
+                f"Invalid axis '{axis}', defaulting to '{self.DEFAULT_AXIS}'."
+            )
+            return self.DEFAULT_AXIS
+        return normalized_axis
+
+    @staticmethod
+    def _calculate_pan_tilt(
+        axis: str, speed: int, pan_clockwise: bool, tilt_clockwise: bool
+    ) -> tuple[int, int]:
+        """Calculate pan and tilt values based on axis and direction."""
+        pan = tilt = 0
+        if "X" in axis:
+            pan = speed if pan_clockwise else -speed
+        if "Y" in axis:
+            tilt = speed if tilt_clockwise else -speed
+        return pan, tilt
+
     def start_continuous(
-        self, speed: int = 5, axis: str = "XY", pan_clockwise=True, tilt_clockwise=True
+        self,
+        speed: int = 5,
+        axis: str = "XY",
+        pan_clockwise: bool = True,
+        tilt_clockwise: bool = True,
     ) -> bool:
         """
         Starts a continuous Pan-Tilt-Zoom (PTZ) movement command.
@@ -139,25 +220,19 @@ class PTZ:
             bool: True if the continuous movement command is successfully initiated,
                 False otherwise.
         """
-        speed = max(self._MIN_SPEED, min(speed, self._MAX_SPEED)) * 15
+        normalized_speed = self._normalize_speed(speed)
+        validated_axis = self._validate_axis(axis)
+        pan, tilt = self._calculate_pan_tilt(
+            validated_axis, normalized_speed, pan_clockwise, tilt_clockwise
+        )
 
-        axis = axis.upper()
-        if axis not in {"X", "Y", "XY"}:
-            logging.warning(f"Invalid axis '{axis}', defaulting to 'XY'.")
-            axis = "XY"
-
-        pan = tilt = 0
-        if "X" in axis:
-            pan = speed if pan_clockwise else -speed
-        if "Y" in axis:
-            tilt = speed if tilt_clockwise else -speed
         success = self._send_continuous_ptz_command(pan, tilt)
 
         if not success:
             logging.debug("Failed to start continuous PTZ movement.")
         return success
 
-    def stop_continuous(self):
+    def stop_continuous(self) -> None:
         """
         Stops any ongoing continuous PTZ (Pan-Tilt-Zoom) commands.
 
@@ -169,6 +244,7 @@ class PTZ:
             Exception: If there is an issue while sending the stop command.
         """
         self._send_continuous_ptz_command(0, 0)
+        self._update_status()
 
     def get_azimuth(self) -> int:
         """
@@ -181,20 +257,20 @@ class PTZ:
         Returns:
             int: The azimuth value as an integer.
         """
-        return int(self.get_status()["PTZStatus"]["AbsoluteHigh"]["azimuth"])
+        return self._current_azimuth
 
     def get_elevation(self) -> int:
         """
         Gets the elevation value from the PTZ (Pan-Tilt-Zoom) status.
 
         The method retrieves PTZ status data and extracts the 'elevation' value
-        from the absolute high position information.
+        from the absolute high-position information.
 
         Returns:
             int: The elevation value extracted from the PTZ status.
 
         """
-        return int(self.get_status()["PTZStatus"]["AbsoluteHigh"]["elevation"])
+        return self._current_elevation
 
     def get_zoom(self) -> int:
         """
@@ -207,37 +283,48 @@ class PTZ:
         Returns:
             int: The current absolute zoom level of the camera.
         """
-        return int(self.get_status()["PTZStatus"]["AbsoluteHigh"]["absoluteZoom"])
+        return self._current_zoom
 
-    def get_status(self) -> dict:
+    def _update_status(self) -> None:
+        """Update internal status from PTZ camera."""
+        if not self._ensure_client_initialized():
+            return
+
+        try:
+            status = self._client.PTZCtrl.channels[self.CHANNEL_ID].status(method="get")
+            absolute_high = status["PTZStatus"]["AbsoluteHigh"]
+            self._current_zoom = int(absolute_high["absoluteZoom"])
+            self._current_elevation = int(absolute_high["elevation"])
+            self._current_azimuth = int(absolute_high["azimuth"])
+            self._status = status
+        except Exception as e:
+            logging.error(f"Failed to get PTZ status: {e}")
+
+    def get_status(self, force_update: bool = False) -> dict:
         """
         Retrieve current PTZ status and parse useful values.
         """
-        if not self._client:
-            logging.error("PTZ client not initialized.")
-            return {}
+        if force_update:
+            self._update_status()
+        return self._status
 
-        try:
-            return self._client.PTZCtrl.channels[1].status(method="get")
-        except Exception as e:
-            logging.error(f"Failed to get PTZ status: {e}")
-            return {}
-
-    def go_to_angle(self, angle: float):
-        """
-        Converts a logical angle into azimuth range and moves camera.
-        """
-
-        status = self.get_status()
-        if not status:
-            elevation = 0
-            zoom = 0
-        else:
-            elevation = status["PTZStatus"]["AbsoluteHigh"]["elevation"]
-            zoom = status["PTZStatus"]["AbsoluteHigh"]["absoluteZoom"]
-
-        azimuth = math.floor(
+    def _angle_to_azimuth(self, angle: float) -> int:
+        """Convert logical angle to azimuth value within the configured range."""
+        return math.floor(
             (angle - 0) * (self._end_azimuth - self._start_azimuth) / (30 - 0)
             + self._start_azimuth
         )
-        self.set_position(elevation, azimuth, zoom)
+
+    def go_to_angle(self, angle: float) -> None:
+        """
+        Converts a logical angle into azimuth range and moves camera.
+        """
+        if abs(angle - self._current_x_angle) < self.ANGLE_TOLERANCE:
+            return
+
+        self._current_x_angle = angle
+
+        azimuth = self._angle_to_azimuth(angle)
+        self.set_absolute_ptz_position(
+            self._current_elevation, azimuth, self._current_zoom
+        )
