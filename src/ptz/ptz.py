@@ -1,3 +1,5 @@
+import time
+
 from hikvisionapi import Client
 
 import logging
@@ -30,7 +32,9 @@ class PTZ:
     XML_CONTENT_TYPE = "application/xml"
 
     # Angle tolerance for movement
-    ANGLE_TOLERANCE = 2
+    ANGLE_TOLERANCE = 1.5
+
+    MIN_INTERVAL = 1
 
     def __init__(
         self,
@@ -50,8 +54,9 @@ class PTZ:
         self._current_elevation = 0
         self._current_azimuth = 0
         self._current_zoom = 0
-        self._current_x_angle = 0
+        self._current_x_angle = -50
         self._status: dict | None = None
+        self._last_angle_update_time = 0  # Track time of last go_to_angle call
 
         if not username and not password:
             logging.warning("No username or password provided for PTZ connection.")
@@ -311,17 +316,28 @@ class PTZ:
     def _angle_to_azimuth(self, angle: float) -> int:
         """Convert logical angle to azimuth value within the configured range."""
         return math.floor(
-            (angle - 0) * (self._end_azimuth - self._start_azimuth) / (30 - 0)
+            (angle - 0) * (self._end_azimuth - self._start_azimuth) / (90 - 0)
             + self._start_azimuth
         )
 
     def go_to_angle(self, angle: float) -> None:
         """
-        Converts a logical angle into azimuth range and moves camera.
+        Converts a logical angle into azimuth range and moves the camera.
+        Only sends a command if:
+        - The change in angle exceeds the tolerance, AND
+        - At least 0.3 second has passed since the previous update.
         """
-        if abs(angle - self._current_x_angle) < self.ANGLE_TOLERANCE:
+
+        now = time.time()
+
+        # Skip if change is too small or too soon
+        if (
+            abs(angle - self._current_x_angle) < self.ANGLE_TOLERANCE
+            or (now - self._last_angle_update_time) < self.MIN_INTERVAL
+        ):
             return
 
+        self._last_angle_update_time = now
         self._current_x_angle = angle
 
         azimuth = self._angle_to_azimuth(angle)
