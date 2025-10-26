@@ -1,5 +1,7 @@
 from src.network.helpers.networks import get_networks
 from src.devices.devices import Devices
+from src.network.helpers.ping import ping
+from src.ptz.ptz import PTZ
 from src.settings import SETTINGS
 from rich.console import Console
 from src.logger import logger
@@ -160,6 +162,27 @@ def diagnose_env():
     console.print(run_linux_command(f"cat {source_file}")["stdout"])
 
 
+def diagnose_ptz():
+    print_current_diagnostic("PTZ")
+    res = ping(SETTINGS.PTZ_HOST)
+    if res:
+        print_log("check", f"PTZ host {SETTINGS.PTZ_HOST} is reachable")
+        print_log("info", f"Start client initialization...")
+        try:
+            PTZ(
+                SETTINGS.PTZ_HOST,
+                SETTINGS.PTZ_USERNAME,
+                SETTINGS.PTZ_PASSWORD,
+                SETTINGS.PTZ_START_AZIMUTH,
+                SETTINGS.PTZ_END_AZIMUTH,
+            )
+            print_log("check", "PTZ client initialized")
+        except Exception as e:
+            print_log("cross", f"Failed to initialize PTZ client: {e}")
+    else:
+        print_log("cross", f"PTZ host {SETTINGS.PTZ_HOST} is unreachable")
+
+
 def run_doctor():
     diagnose_networks()
     diagnose_routing()
@@ -167,5 +190,6 @@ def run_doctor():
     diagnose_env()
     diagnose_rtp_devices(auto=True)
     diagnose_rtp_devices(auto=False)
+    diagnose_ptz()
     console.rule("[bold magenta]Diagnostics complete[/bold magenta]")
     sys.exit(0)
