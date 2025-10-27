@@ -1,20 +1,21 @@
-import time
-
 from hikvisionapi import Client
 
+import threading
 import logging
+import time
 import math
+import cv2
 
 
 class PTZ:
     """
-    Provides an interface to control a PTZ (Pan-Tilt-Zoom) camera.
-    This class is designed to manage and control PTZ cameras, allowing movement
-    across different axes (pan, tilt) and zoom levels. It supports absolute
-    positioning, continuous movement, and status retrieval. The class requires
-    authentication and establishes a connection to the PTZ client for issuing
-    commands.
+    Singleton PTZ camera controller.
+    Provides an interface to control a PTZ (Pan-Tilt-Zoom) camera, ensuring only one
+    instance of the class exists across the entire program.
     """
+
+    _instance = None
+    _lock = threading.Lock()  # For thread-safe singleton creation
 
     # Speed constraints
     MIN_SPEED = 1
@@ -36,6 +37,14 @@ class PTZ:
 
     MIN_INTERVAL = 1
 
+    def __new__(cls, *args, **kwargs):
+        """Ensure only one PTZ instance is created."""
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(
         self,
         host: str,
@@ -43,7 +52,14 @@ class PTZ:
         password: str,
         start_azimuth: int = None,
         end_azimuth: int = None,
+        rtsp_port: int = 554,
     ):
+        # Prevent reinitialization if already initialized
+        if hasattr(self, "_initialized") and self._initialized:
+            return
+
+        self._initialized = True  # Flag so __init__ runs only once
+
         self._host = host
         self._username = username
         self._password = password
@@ -56,7 +72,20 @@ class PTZ:
         self._current_zoom = 0
         self._current_x_angle = -50
         self._status: dict | None = None
-        self._last_angle_update_time = 0  # Track time of last go_to_angle call
+        self._last_angle_update_time = 0
+
+        self.rtsp_url = (
+            f"rtsp://{username}:{password}@{host}:{rtsp_port}/Streaming/Channels/101/"
+        )
+        self.rtsp_stream = cv2.VideoCapture(self.rtsp_url)
+
+        if not self.rtsp_stream.isOpened():
+            logging.error("❌ Cannot open RTSP stream. Check the URL or credentials.")
+            logging.error(
+                f"RTSP URL: rtsp://{username}:XXX@{host}:{rtsp_port}/Streaming/Channels/101/"
+            )
+        else:
+            logging.info("rtsp stream opened")
 
         if not username and not password:
             logging.warning("No username or password provided for PTZ connection.")
@@ -66,10 +95,17 @@ class PTZ:
             self._client = Client(
                 f"http://{self._host}", self._username, self._password
             )
-            logging.info(f"Connected to PTZ camera at {self._host}")
+            logging.info(f"✅ Connected to PTZ camera at {self._host}")
         except Exception as e:
-            logging.error(f"Failed to connect to PTZ camera at {self._host}: {e}")
+            logging.error(f"❌ Failed to connect to PTZ camera at {self._host}: {e}")
             raise ConnectionError(f"PTZ connection failed: {e}")
+
+    @classmethod
+    def get_instance(cls) -> "PTZ":
+        """Return the singleton PTZ instance, if already created."""
+        if cls._instance is None:
+            raise RuntimeError("PTZ has not been initialized yet. Call PTZ(...) first.")
+        return cls._instance
 
     def _ensure_client_initialized(self) -> bool:
         """Check if the PTZ client is initialized and log an error if not."""
@@ -194,6 +230,9 @@ class PTZ:
         if "Y" in axis:
             tilt = speed if tilt_clockwise else -speed
         return pan, tilt
+
+    def get_video_stream(self):
+        return self.rtsp_stream
 
     def start_continuous(
         self,
@@ -344,3 +383,10 @@ class PTZ:
         self.set_absolute_ptz_position(
             self._current_elevation, azimuth, self._current_zoom
         )
+
+    def release_stream(self):
+        """Safely release the RTSP stream."""
+        if hasattr(self, "rtsp_stream") and self.rtsp_stream is not None:
+            self.rtsp_stream.release()
+            self.rtsp_stream = None
+            logging.info("📷 RTSP stream released.")
