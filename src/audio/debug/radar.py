@@ -28,6 +28,12 @@ class RadarPlot:
         self.cmap = plt.get_cmap("RdYlGn_r")  # red=high, green=low
         self.norm = Normalize(vmin=0, vmax=self.max_energy)
 
+        # --- Angle text label ---
+        # Placed outside the polar plot (figure-relative coordinates)
+        self.text_angle = self.fig.text(
+            0.02, 0.95, "Angle: 0°", fontsize=15, color="black", backgroundcolor="white"
+        )
+
         plt.ion()
         plt.show(block=False)
 
@@ -41,6 +47,9 @@ class RadarPlot:
         # Map energy to color
         color = self.cmap(self.norm(energy))
         self.line.set_color(color)
+
+        # Update angle display
+        self.text_angle.set_text(f"Angle: {angle:.1f}°")
 
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
