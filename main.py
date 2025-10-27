@@ -1,5 +1,6 @@
 from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
+from src.computer_vision.drone_detection import DroneDetection
 from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
 from src.audio.debug.radar import RadarPlot
@@ -10,6 +11,7 @@ from src.settings import SETTINGS
 from src.arguments import args
 from src.logger import logger
 from src.ptz.ptz import PTZ
+from time import sleep
 
 import datetime
 import logging
@@ -23,13 +25,7 @@ class AudioProcess:
         if SETTINGS.AUDIO_RADAR:  # Only for debug purposes
             self.radar = RadarPlot()
         self.angle_estimator = AngleOfArrivalEstimator(nb_channels, angle_coverage)
-        self.ptz = PTZ(
-            SETTINGS.PTZ_HOST,
-            SETTINGS.PTZ_USERNAME,
-            SETTINGS.PTZ_PASSWORD,
-            SETTINGS.PTZ_START_AZIMUTH,
-            SETTINGS.PTZ_END_AZIMUTH,
-        )
+        self.ptz = PTZ.get_instance()
 
     def process(self, channels):
         # enhanced_audio = apply_noise_reduction(channels)
@@ -53,6 +49,19 @@ if __name__ == "__main__":
     logger.debug(f"Loaded settings: {SETTINGS}")
     devices = Devices.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
     # devices = Devices.auto_discover()
+    ptz = PTZ(
+        SETTINGS.PTZ_HOST,
+        SETTINGS.PTZ_USERNAME,
+        SETTINGS.PTZ_PASSWORD,
+        SETTINGS.PTZ_START_AZIMUTH,
+        SETTINGS.PTZ_END_AZIMUTH,
+    )
+
+    audio = AudioProcess(
+        nb_channels=len(devices) * 2,
+        frame_duration_s=SETTINGS.REC_DURATION / 1000,
+        angle_coverage=SETTINGS.AUDIO_ANGLE_COVERAGE,
+    )
 
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")
@@ -81,20 +90,22 @@ if __name__ == "__main__":
         )
 
     # Every SETTING.REC_DURATION seconds, this function is called
-    audio = AudioProcess(
-        nb_channels=len(devices) * 2,
-        frame_duration_s=SETTINGS.REC_DURATION / 1000,
-        angle_coverage=SETTINGS.AUDIO_ANGLE_COVERAGE,
-    )
     source.set_callback(audio.process)
+    drone_detector = DroneDetection(
+        model_type="yolo", model_path="assets/computer_vision_models/yolov8n.pt"
+    )
+    stream = ptz.get_video_stream()
 
     try:
         source.start()
-        print("Audio source started. Press Ctrl+C to stop.")
+        drone_detector.start(stream, display=True)
+        print("Listening started. Press Ctrl+C to stop.")
         while True:
-            import time
+            sleep(0.1)
 
-            time.sleep(0.1)
     except KeyboardInterrupt:
         print("\nStopping audio...")
+    finally:
+        drone_detector.stop()
+        ptz.release_stream()
         source.stop()
