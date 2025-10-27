@@ -1,7 +1,7 @@
 import subprocess
 
 
-def ping(ip, count=1, timeout=1):
+def ping(ip, count=1, timeout=1) -> bool:
     """
     Ping an IP address and return True if reachable, False otherwise.
     Works on Linux/macOS.
