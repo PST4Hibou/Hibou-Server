@@ -44,9 +44,10 @@ class Settings:
     PTZ_START_AZIMUTH: int
     PTZ_END_AZIMUTH: int
     AUDIO_ANGLE_COVERAGE: int
-    AUDIO_PLAYBACK: bool = False
-    AUDIO_ENERGY_SPECTRUM: bool = True
-    AUDIO_RADAR: bool = True
+    AUDIO_PLAYBACK: bool = False  # Only for debug purposes
+    AUDIO_ENERGY_SPECTRUM: bool = False  # Only for debug purposes
+    AUDIO_RADAR: bool = False  # Only for debug purposes
+    CV_VIDEO_PLAYBACK: bool = False  # Only for debug purposes
 
 
 def parse_list(value: str):
@@ -60,6 +61,14 @@ def parse_bool(value: str) -> bool:
 
 
 try:
+    if Settings.CV_VIDEO_PLAYBACK and (
+        Settings.AUDIO_RADAR or Settings.AUDIO_ENERGY_SPECTRUM
+    ):
+        logging.warning(
+            "Both CV video and audio visualization are enabled. Disabling CV video."
+        )
+        Settings.CV_VIDEO_PLAYBACK = False
+
     SETTINGS = Settings(
         ENABLE_REC_SAVE=parse_bool(os.getenv("ENABLE_REC_SAVE")),
         REC_SAVE_FP=os.getenv("REC_SAVE_FP"),

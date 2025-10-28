@@ -106,7 +106,7 @@ if __name__ == "__main__":
 
     try:
         source.start()
-        drone_detector.start(stream, display=True)
+        drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
         print("Listening started. Press Ctrl+C to stop.")
         while True:
             sleep(0.01)  # TODO: Find a solution without using sleep
