@@ -3,6 +3,7 @@ from src.audio.angle_of_arrival import AngleOfArrivalEstimator
 from src.computer_vision.drone_detection import DroneDetection
 from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
+from src.audio.models.channel import Channel
 from src.audio.debug.radar import RadarPlot
 from src.audio.energy import compute_energy
 from src.devices.devices import Devices
@@ -10,6 +11,7 @@ from src.audio.play import play_sample
 from src.settings import SETTINGS
 from src.arguments import args
 from src.logger import logger
+from collections import deque
 from src.ptz.ptz import PTZ
 from time import sleep
 
@@ -19,30 +21,24 @@ import os
 
 
 class AudioProcess:
-    def __init__(self, nb_channels, frame_duration_s, angle_coverage):
-        if SETTINGS.AUDIO_ENERGY_SPECTRUM:  # Only for debug purposes
-            self.spectro = ChannelTimeSpectrogram(nb_channels, frame_duration_s)
-        if SETTINGS.AUDIO_RADAR:  # Only for debug purposes
-            self.radar = RadarPlot()
-        self.angle_estimator = AngleOfArrivalEstimator(nb_channels, angle_coverage)
-        self.ptz = PTZ.get_instance()
+    def __init__(self):
+        self.audio_queue = deque(maxlen=1)
 
-    def process(self, channels):
-        # enhanced_audio = apply_noise_reduction(channels)
-
-        energies = [compute_energy(ch) for ch in channels]
-        if SETTINGS.AUDIO_ENERGY_SPECTRUM:  # Only for debug purposes
-            self.spectro.update(energies)
-
-        angle = self.angle_estimator.estimate(energies)
-
-        self.ptz.go_to_angle(angle)
-
-        if SETTINGS.AUDIO_RADAR:
-            self.radar.update(angle, max(energies))
+    def process(self, audio_samples: list[Channel]):
+        # enhanced_audio = apply_noise_reduction(audio_samples)
+        self.audio_queue.append(audio_samples)
 
         if SETTINGS.AUDIO_PLAYBACK:  # Only for debug purposes
-            play_sample(channels, 0)
+            play_sample(audio_samples, 0)
+
+    def get_last_channels(self) -> list[Channel] | None:
+        try:
+            return self.audio_queue.pop()
+        except IndexError:
+            return None
+
+    def is_empty(self) -> bool:
+        return len(self.audio_queue) == 0
 
 
 if __name__ == "__main__":
@@ -57,11 +53,7 @@ if __name__ == "__main__":
         SETTINGS.PTZ_END_AZIMUTH,
     )
 
-    audio = AudioProcess(
-        nb_channels=len(devices) * 2,
-        frame_duration_s=SETTINGS.REC_DURATION / 1000,
-        angle_coverage=SETTINGS.AUDIO_ANGLE_COVERAGE,
-    )
+    audio = AudioProcess()
 
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")
@@ -96,12 +88,44 @@ if __name__ == "__main__":
     )
     stream = ptz.get_video_stream()
 
+    nb_channels = len(devices) * 2
+    frame_duration_s = SETTINGS.REC_DURATION / 1000
+    angle_coverage = SETTINGS.AUDIO_ANGLE_COVERAGE
+
+    if SETTINGS.AUDIO_ENERGY_SPECTRUM:  # Only for debug purposes
+        energy_spectrum_plot = ChannelTimeSpectrogram(nb_channels, frame_duration_s)
+    else:
+        energy_spectrum_plot = None
+
+    if SETTINGS.AUDIO_RADAR:  # Only for debug purposes
+        radar_plot = RadarPlot()
+    else:
+        radar_plot = None
+
+    angle_estimator = AngleOfArrivalEstimator(nb_channels, angle_coverage)
+
     try:
         source.start()
         drone_detector.start(stream, display=True)
         print("Listening started. Press Ctrl+C to stop.")
         while True:
-            sleep(0.1)
+            sleep(0.01)  # TODO: Find a solution without using sleep
+
+            if not audio.is_empty():
+                channels = audio.get_last_channels()
+                energies = [compute_energy(ch) for ch in channels]
+
+                angle = angle_estimator.estimate(energies)
+
+                ptz.go_to_angle(angle)
+
+                # Only for debug purposes
+                if SETTINGS.AUDIO_ENERGY_SPECTRUM and energy_spectrum_plot is not None:
+                    energy_spectrum_plot.update(energies)
+
+                # Only for debug purposes
+                if SETTINGS.AUDIO_RADAR and radar_plot is not None:
+                    radar_plot.update(angle, max(energies))
 
     except KeyboardInterrupt:
         print("\nStopping audio...")
