@@ -45,15 +45,6 @@ if __name__ == "__main__":
     logger.debug(f"Loaded settings: {SETTINGS}")
     devices = Devices.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
     # devices = Devices.auto_discover()
-    ptz = PTZ(
-        SETTINGS.PTZ_HOST,
-        SETTINGS.PTZ_USERNAME,
-        SETTINGS.PTZ_PASSWORD,
-        SETTINGS.PTZ_START_AZIMUTH,
-        SETTINGS.PTZ_END_AZIMUTH,
-    )
-
-    audio = AudioProcess()
 
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")
@@ -81,10 +72,18 @@ if __name__ == "__main__":
             stream_latency=int(SETTINGS.STREAM_LATENCY),
         )
 
-    # Every SETTING.REC_DURATION seconds, this function is called
-    source.set_callback(audio.process)
+    audio = AudioProcess()
+    source.set_callback(audio.process)  # Called every SETTING.REC_DURATION
     drone_detector = DroneDetection(
         model_type="yolo", model_path="assets/computer_vision_models/yolov8n.pt"
+    )
+
+    ptz = PTZ(
+        SETTINGS.PTZ_HOST,
+        SETTINGS.PTZ_USERNAME,
+        SETTINGS.PTZ_PASSWORD,
+        SETTINGS.PTZ_START_AZIMUTH,
+        SETTINGS.PTZ_END_AZIMUTH,
     )
     stream = ptz.get_video_stream()
 
@@ -92,22 +91,24 @@ if __name__ == "__main__":
     frame_duration_s = SETTINGS.REC_DURATION / 1000
     angle_coverage = SETTINGS.AUDIO_ANGLE_COVERAGE
 
-    if SETTINGS.AUDIO_ENERGY_SPECTRUM:  # Only for debug purposes
-        energy_spectrum_plot = ChannelTimeSpectrogram(nb_channels, frame_duration_s)
-    else:
-        energy_spectrum_plot = None
-
-    if SETTINGS.AUDIO_RADAR:  # Only for debug purposes
-        radar_plot = RadarPlot()
-    else:
-        radar_plot = None
-
     angle_estimator = AngleOfArrivalEstimator(nb_channels, angle_coverage)
+
+    # Only for debug purposes
+    energy_spectrum_plot = (
+        ChannelTimeSpectrogram(nb_channels, frame_duration_s)
+        if SETTINGS.AUDIO_ENERGY_SPECTRUM
+        else None
+    )
+
+    # Only for debug purposes
+    radar_plot = RadarPlot() if SETTINGS.AUDIO_RADAR else None
 
     try:
         source.start()
         drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
         print("Listening started. Press Ctrl+C to stop.")
+
+        # Main loop
         while True:
             sleep(0.01)  # TODO: Find a solution without using sleep
 
