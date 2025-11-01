@@ -1,16 +1,15 @@
 import logging
 import os
 
-
+from src.adc_devices.models.adc_device import ADCDevice
 from src.audio.sources.gstreamer_source import GstreamerSource
-from src.devices.models import Device
 from src.settings import SETTINGS
 
 
 class RTPAudioSource(GstreamerSource):
     def __init__(
         self,
-        devices: list[Device],
+        devices: list[ADCDevice],
         enable_recording_saves: bool,
         save_fp: str,
         record_duration: int,

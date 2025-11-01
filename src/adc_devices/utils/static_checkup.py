@@ -1,7 +1,7 @@
 import dataclasses
-
-from src.devices.models import Device
 from dataclasses import fields
+
+from ..models.adc_device import ADCDevice
 
 SUPPORTED_DEVICES: set[str] = {"DAI2"}
 
@@ -34,7 +34,7 @@ def check_ports(devices: list[dict]) -> bool:
     return len(ports) == len(set(ports))
 
 
-def check_required_fields(dev: dict, model_cls=Device) -> None:
+def check_required_fields(dev: dict, model_cls=ADCDevice) -> None:
     """
     Dynamically check that all required fields from a dataclass are present
     in a device dictionary.

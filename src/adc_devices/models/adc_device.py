@@ -1,9 +1,10 @@
-from src.network.helpers.ping import ping
 from dataclasses import dataclass
+
+from src.network.helpers.ping import ping
 
 
 @dataclass
-class Device:
+class ADCDevice:
     name: str
     model: str
     ipv4: str

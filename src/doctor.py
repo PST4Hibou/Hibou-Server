@@ -1,16 +1,17 @@
-from src.network.helpers.networks import get_networks
-from src.devices.devices import Devices
-from src.network.helpers.ping import ping
-from src.ptz.ptz import PTZ
-from src.settings import SETTINGS
+import os
+import subprocess
+import sys
+
 from rich.console import Console
-from src.logger import logger
 from rich.table import Table
 from rich.text import Text
 
-import subprocess
-import sys
-import os
+from src.adc_devices.adc_device_manager import ADCDeviceManager
+from src.logger import logger
+from src.network.helpers.networks import get_networks
+from src.network.helpers.ping import ping
+from src.ptz.ptz import PTZ
+from src.settings import SETTINGS
 
 console = Console(force_terminal=True)
 
@@ -102,9 +103,9 @@ def diagnose_rtp_devices(auto: bool = True):
     print_current_diagnostic(section_title)
 
     devices = (
-        Devices.auto_discover()
+        ADCDeviceManager.auto_discover()
         if auto
-        else Devices.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
+        else ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
     )
 
     table = Table(show_header=True, header_style="bold cyan")

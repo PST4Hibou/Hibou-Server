@@ -1,14 +1,14 @@
 from __future__ import annotations
-from typing import Generic, List, TypeVar
 
 import abc
+from typing import Generic, List, TypeVar
 
 # Define type variables
 TSource = TypeVar("TSource")  # Raw device type (e.g., DanteDevice)
 TTarget = TypeVar("TTarget")  # Internal model type (e.g., Device)
 
 
-class DeviceManager(abc.ABC, Generic[TSource, TTarget]):
+class BaseVendor(abc.ABC, Generic[TSource, TTarget]):
     """Base class for all network audio device managers."""
 
     @staticmethod

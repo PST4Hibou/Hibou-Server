@@ -1,15 +1,16 @@
-from src.network.helpers.interface import get_interface_from_ipv4
-from src.network.multicast import get_multicast_stream_info
-from src.devices.managers.base import DeviceManager
-from netaudio import DanteBrowser, DanteDevice
-from src.devices.models import Device
-from typing import List
-
 import asyncio
 import logging
+from typing import List
+
+from netaudio import DanteBrowser, DanteDevice
+
+from src.network.helpers.interface import get_interface_from_ipv4
+from src.network.multicast import get_multicast_stream_info
+from ..base_vendor import BaseVendor
+from ...models.adc_device import ADCDevice
 
 
-class AVIOAI2Manager(DeviceManager):
+class AVIOAI2Manager(BaseVendor):
     """Manager for Audinate AVIO AI2 devices."""
 
     @staticmethod
@@ -38,7 +39,7 @@ class AVIOAI2Manager(DeviceManager):
         return devices
 
     @classmethod
-    def scan_devices(cls) -> List[Device]:
+    def scan_devices(cls) -> List[ADCDevice]:
         """Synchronous wrapper for asynchronous Dante discovery."""
         logging.debug("Starting synchronous device discovery for AVIOAI2.")
         dante_devices = cls._run(cls._scan_devices)
@@ -54,13 +55,13 @@ class AVIOAI2Manager(DeviceManager):
         return converted_devices
 
     @staticmethod
-    def to_device(device: DanteDevice) -> Device:
+    def to_device(device: DanteDevice) -> ADCDevice:
         """Convert DanteDevice to your internal Device model."""
         interface = get_interface_from_ipv4(device.ipv4)
         if not interface:
             raise ValueError(f"No interface found for IP {device.ipv4}")
         res = get_multicast_stream_info(interface, device.ipv4)
-        return Device(
+        return ADCDevice(
             name=device.name,
             model=device.model_id,
             ipv4=str(device.ipv4),

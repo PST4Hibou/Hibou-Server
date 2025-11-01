@@ -1,23 +1,23 @@
-from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram
-from src.audio.angle_of_arrival import AngleOfArrivalEstimator
-from src.computer_vision.drone_detection import DroneDetection
-from src.audio.sources.file_source import FileAudioSource
-from src.audio.sources.rtp_source import RTPAudioSource
-from src.audio.models.channel import Channel
-from src.audio.debug.radar import RadarPlot
-from src.audio.energy import compute_energy
-from src.devices.devices import Devices
-from src.audio.play import play_sample
-from src.settings import SETTINGS
-from src.arguments import args
-from src.logger import logger
-from collections import deque
-from src.ptz.ptz import PTZ
-from time import sleep
-
 import datetime
 import logging
 import os
+from collections import deque
+from time import sleep
+
+from src.adc_devices.adc_device_manager import ADCDeviceManager
+from src.arguments import args
+from src.audio.angle_of_arrival import AngleOfArrivalEstimator
+from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram
+from src.audio.debug.radar import RadarPlot
+from src.audio.energy import compute_energy
+from src.audio.models.channel import Channel
+from src.audio.play import play_sample
+from src.audio.sources.file_source import FileAudioSource
+from src.audio.sources.rtp_source import RTPAudioSource
+from src.computer_vision.drone_detection import DroneDetection
+from src.logger import logger
+from src.ptz.ptz import PTZ
+from src.settings import SETTINGS
 
 
 class AudioProcess:
@@ -43,7 +43,7 @@ class AudioProcess:
 
 if __name__ == "__main__":
     logger.debug(f"Loaded settings: {SETTINGS}")
-    devices = Devices.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
+    devices = ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
     # devices = Devices.auto_discover()
 
     logging.info(f"{len(devices)} devices loaded...")

@@ -1,15 +1,15 @@
-from src.devices.managers.audinate.AVIOAI2 import AVIOAI2Manager
-from src.devices.static_checkup import static_checkup
-from src.helpers.json import read_json, write_json
-from src.devices.models import Device
-from typing import List, Optional
+import logging
 from dataclasses import asdict
 from pathlib import Path
+from typing import List, Optional
 
-import logging
+from src.helpers.json import read_json, write_json
+from .models.adc_device import ADCDevice
+from .utils.static_checkup import static_checkup
+from .vendors.audinate.avio_ai2 import AVIOAI2Manager
 
 
-class Devices:
+class ADCDeviceManager:
     """High-level orchestrator for discovering, loading, and managing audio devices."""
 
     _SUPPORTED_MANAGERS = [
@@ -17,7 +17,7 @@ class Devices:
     ]
 
     @classmethod
-    def load_devices_from_files(cls, json_path: Path) -> List[Device]:
+    def load_devices_from_files(cls, json_path: Path) -> List[ADCDevice]:
         """
         Load devices from a JSON configuration file and return a list of Device instances.
         """
@@ -33,7 +33,7 @@ class Devices:
         if not static_checkup(devices_data):
             raise ValueError("Device configuration failed static validation.")
 
-        devices = [Device(**dev) for dev in devices_data]
+        devices = [ADCDevice(**dev) for dev in devices_data]
         logging.info("Loaded %d devices from %s", len(devices), json_path)
         return devices
 
@@ -41,9 +41,9 @@ class Devices:
     def add_device(
         cls,
         json_path: Path,
-        new_device: Device,
-        devices: Optional[List[Device]] = None,
-    ) -> List[Device]:
+        new_device: ADCDevice,
+        devices: Optional[List[ADCDevice]] = None,
+    ) -> List[ADCDevice]:
         """
         Add a new device to the configuration, validate, and persist to file.
         """
@@ -63,11 +63,11 @@ class Devices:
         return devices
 
     @classmethod
-    def auto_discover(cls) -> List[Device]:
+    def auto_discover(cls) -> List[ADCDevice]:
         """
         Automatically discover devices using all registered managers.
         """
-        discovered_devices: List[Device] = []
+        discovered_devices: List[ADCDevice] = []
 
         for manager_cls in cls._SUPPORTED_MANAGERS:
             logging.blank_line()
@@ -89,7 +89,7 @@ class Devices:
         return discovered_devices
 
     @staticmethod
-    def to_string(device: Device) -> str:
+    def to_string(device: ADCDevice) -> str:
         """Return a human-readable summary of a device."""
         return (
             f"Device: {device.name}, Model: {device.model}, IP: {device.ipv4}, "
