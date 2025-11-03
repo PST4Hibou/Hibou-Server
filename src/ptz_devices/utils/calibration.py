@@ -1,6 +1,4 @@
-from src.ptz.ui_controller import start_ui_controller
-from src.settings import SETTINGS
-from src.ptz.ptz import PTZ
+from .ui_controller import start_ui_controller
 
 
 def start_ptz_calibration():
@@ -31,10 +29,10 @@ def start_ptz_calibration():
     Example usage:
         start_ptz_calibration()
     """
-    ptz = PTZ(SETTINGS.PTZ_HOST, SETTINGS.PTZ_USERNAME, SETTINGS.PTZ_PASSWORD)
+    # ptz = DS2DY9250IAXA(SETTINGS.PTZ_HOST, SETTINGS.PTZ_USERNAME, SETTINGS.PTZ_PASSWORD)
 
     start_ui_controller(
-        ptz,
+        "main_camera",
         "Once the correct azimuth has been found, please update .env conf file \n with the new value",
     )
 

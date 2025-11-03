@@ -1,13 +1,15 @@
+from src.ptz_devices.vendors.base_vendor import BaseVendor
 from hikvisionapi import Client
+
 
 import threading
 import logging
-import time
 import math
+import time
 import cv2
 
 
-class PTZ:
+class DS2DY9250IAXA(BaseVendor):
     """
     Singleton PTZ camera controller.
     Provides an interface to control a PTZ (Pan-Tilt-Zoom) camera, ensuring only one
@@ -101,7 +103,7 @@ class PTZ:
             raise ConnectionError(f"PTZ connection failed: {e}")
 
     @classmethod
-    def get_instance(cls) -> "PTZ":
+    def get_instance(cls) -> "DS2DY9250IAXA":
         """Return the singleton PTZ instance, if already created."""
         if cls._instance is None:
             raise RuntimeError("PTZ has not been initialized yet. Call PTZ(...) first.")
@@ -145,19 +147,10 @@ class PTZ:
 
         xml_command = self._build_absolute_position_xml(elevation, azimuth, zoom)
 
-        xml_absolute = f"""
-        <PTZData>
-            <AbsoluteHigh>
-                <elevation>{elevation}</elevation>
-                <azimuth>{azimuth}</azimuth>
-                <absoluteZoom>{zoom}</absoluteZoom>
-            </AbsoluteHigh>
-        </PTZData>
-        """.strip()
         try:
             self._client.PTZCtrl.channels[self.CHANNEL_ID].absolute(
                 method="put",
-                data=xml_absolute,
+                data=xml_command,
                 headers={"Content-Type": self.XML_CONTENT_TYPE},
             )
 
@@ -364,12 +357,12 @@ class PTZ:
         Converts a logical angle into azimuth range and moves the camera.
         Only sends a command if:
         - The change in angle exceeds the tolerance, AND
-        - At least 0.3 second has passed since the previous update.
+        - At least 0.3 seconds have passed since the previous update.
         """
 
         now = time.time()
 
-        # Skip if change is too small or too soon
+        # Skip if the change is too small or too soon
         if (
             abs(angle - self._current_x_angle) < self.ANGLE_TOLERANCE
             or (now - self._last_angle_update_time) < self.MIN_INTERVAL

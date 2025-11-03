@@ -1,6 +1,6 @@
-from src.ptz.calibration import start_ptz_calibration
-from src.settings import SETTINGS
+from src.ptz_devices.utils.calibration import start_ptz_calibration
 from src.doctor import run_doctor
+from src.settings import SETTINGS
 
 import argparse
 

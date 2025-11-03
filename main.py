@@ -1,23 +1,24 @@
-import datetime
-import logging
-import os
+from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
+from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram
+from src.adc_devices.adc_device_manager import ADCDeviceManager
+from src.audio.angle_of_arrival import AngleOfArrivalEstimator
+from src.computer_vision.drone_detection import DroneDetection
+from src.audio.sources.file_source import FileAudioSource
+from src.ptz_devices.ptz_controller import PTZController
+from src.audio.sources.rtp_source import RTPAudioSource
+from src.audio.models.channel import Channel
+from src.audio.debug.radar import RadarPlot
+from src.audio.energy import compute_energy
+from src.audio.play import play_sample
+from src.settings import SETTINGS
+from src.arguments import args
+from src.logger import logger
 from collections import deque
 from time import sleep
 
-from src.adc_devices.adc_device_manager import ADCDeviceManager
-from src.arguments import args
-from src.audio.angle_of_arrival import AngleOfArrivalEstimator
-from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram
-from src.audio.debug.radar import RadarPlot
-from src.audio.energy import compute_energy
-from src.audio.models.channel import Channel
-from src.audio.play import play_sample
-from src.audio.sources.file_source import FileAudioSource
-from src.audio.sources.rtp_source import RTPAudioSource
-from src.computer_vision.drone_detection import DroneDetection
-from src.logger import logger
-from src.ptz.ptz import PTZ
-from src.settings import SETTINGS
+import datetime
+import logging
+import os
 
 
 class AudioProcess:
@@ -78,14 +79,17 @@ if __name__ == "__main__":
         model_type="yolo", model_path="assets/computer_vision_models/yolov8n.pt"
     )
 
-    ptz = PTZ(
-        SETTINGS.PTZ_HOST,
-        SETTINGS.PTZ_USERNAME,
-        SETTINGS.PTZ_PASSWORD,
-        SETTINGS.PTZ_START_AZIMUTH,
-        SETTINGS.PTZ_END_AZIMUTH,
+    PTZController(
+        "main_camera",
+        DS2DY9250IAXA,
+        host=SETTINGS.PTZ_HOST,
+        username=SETTINGS.PTZ_USERNAME,
+        password=SETTINGS.PTZ_PASSWORD,
+        start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
+        end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
     )
-    stream = ptz.get_video_stream()
+
+    stream = PTZController("main_camera").get_video_stream()
 
     nb_channels = len(devices) * 2
     frame_duration_s = SETTINGS.REC_DURATION / 1000
@@ -118,7 +122,7 @@ if __name__ == "__main__":
 
                 angle = angle_estimator.estimate(energies)
 
-                ptz.go_to_angle(angle)
+                PTZController("main_camera").go_to_angle(angle)
 
                 # Only for debug purposes
                 if SETTINGS.AUDIO_ENERGY_SPECTRUM and energy_spectrum_plot is not None:
@@ -131,6 +135,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nStopping audio...")
     finally:
+        PTZController.remove("main_camera")
         drone_detector.stop()
-        ptz.release_stream()
         source.stop()

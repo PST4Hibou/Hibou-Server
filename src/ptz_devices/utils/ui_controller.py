@@ -1,13 +1,14 @@
-from matplotlib.widgets import Button
-from src.ptz.ptz import PTZ
+import threading
+import time
 from typing import Any
 
 import matplotlib.pyplot as plt
-import threading
-import time
+from matplotlib.widgets import Button
+
+from src.ptz_devices.ptz_controller import PTZController
 
 
-def start_ui_controller(ptz: PTZ, text_bottom: str = ""):
+def start_ui_controller(ptz_name: str, text_bottom: str = ""):
 
     speed = 4
     min_speed, max_speed = 1, 7
@@ -21,7 +22,7 @@ def start_ui_controller(ptz: PTZ, text_bottom: str = ""):
                 axis = str(current_direction["axis"])
                 pan_cw = current_direction["pan_cw"]
                 tilt_cw = current_direction["tilt_cw"]
-                ptz.start_continuous(
+                PTZController(ptz_name).start_continuous(
                     speed,
                     axis=axis,
                     pan_clockwise=pan_cw if pan_cw is not None else True,
@@ -60,12 +61,12 @@ def start_ui_controller(ptz: PTZ, text_bottom: str = ""):
 
     def stop(event):
         current_direction.update({"axis": None, "pan_cw": None, "tilt_cw": None})
-        ptz.stop_continuous()
+        PTZController(ptz_name).stop_continuous()
 
     def quit_app(event):
         nonlocal running
         running = False
-        ptz.stop_continuous()
+        PTZController(ptz_name).stop_continuous()
         plt.close("all")
 
     # ---- Matplotlib GUI ----
@@ -134,7 +135,7 @@ def start_ui_controller(ptz: PTZ, text_bottom: str = ""):
             buttons["right"].ax,
         ]:
             stop(event)
-            azi = ptz.get_azimuth()
+            azi = PTZController(ptz_name).get_azimuth()
             azimuth_text.set_text(f"Azimuth: {azi}")
             plt.draw()
 
@@ -151,4 +152,4 @@ def start_ui_controller(ptz: PTZ, text_bottom: str = ""):
 
     # Cleanup after closing GUI
     running = False
-    ptz.stop_continuous()
+    PTZController(ptz_name).stop_continuous()

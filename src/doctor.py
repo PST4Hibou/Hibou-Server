@@ -1,17 +1,17 @@
-import os
-import subprocess
-import sys
-
+from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
+from src.adc_devices.adc_device_manager import ADCDeviceManager
+from src.ptz_devices.ptz_controller import PTZController
+from src.network.helpers.networks import get_networks
+from src.network.helpers.ping import ping
+from src.settings import SETTINGS
 from rich.console import Console
+from src.logger import logger
 from rich.table import Table
 from rich.text import Text
 
-from src.adc_devices.adc_device_manager import ADCDeviceManager
-from src.logger import logger
-from src.network.helpers.networks import get_networks
-from src.network.helpers.ping import ping
-from src.ptz.ptz import PTZ
-from src.settings import SETTINGS
+import subprocess
+import sys
+import os
 
 console = Console(force_terminal=True)
 
@@ -170,12 +170,14 @@ def diagnose_ptz():
         print_log("check", f"PTZ host {SETTINGS.PTZ_HOST} is reachable")
         print_log("info", f"Start client initialization...")
         try:
-            PTZ(
-                SETTINGS.PTZ_HOST,
-                SETTINGS.PTZ_USERNAME,
-                SETTINGS.PTZ_PASSWORD,
-                SETTINGS.PTZ_START_AZIMUTH,
-                SETTINGS.PTZ_END_AZIMUTH,
+            PTZController(
+                "main_camera",
+                DS2DY9250IAXA,
+                host=SETTINGS.PTZ_HOST,
+                username=SETTINGS.PTZ_USERNAME,
+                password=SETTINGS.PTZ_PASSWORD,
+                start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
+                end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
             )
             print_log("check", "PTZ client initialized")
         except Exception as e:
