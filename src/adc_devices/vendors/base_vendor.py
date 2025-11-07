@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-import abc
 from typing import Generic, List, TypeVar
+from src.adc_devices import ADCDevice
+
+import abc
+
 
 # Define type variables
 TSource = TypeVar("TSource")  # Raw device type (e.g., DanteDevice)
@@ -25,6 +28,6 @@ class BaseVendor(abc.ABC, Generic[TSource, TTarget]):
 
     @staticmethod
     @abc.abstractmethod
-    def to_device(device: TSource) -> TTarget:
+    def to_device(device: TSource) -> ADCDevice:
         """Convert a discovered raw device into the internal Device model."""
         raise NotImplementedError
