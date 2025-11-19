@@ -46,7 +46,6 @@ class GstreamerSource(Source):
         self.required_buffer_size = buffer_size
 
     def _on_new_sample(self, channel_id: int, data):
-
         # store data per channel
         self._sinks_data[channel_id] += data
 

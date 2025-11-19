@@ -1,5 +1,5 @@
-from src.audio.models.channel import Channel
 from src.settings import SETTINGS
+from src.audio import Channel
 
 import sounddevice as sd
 

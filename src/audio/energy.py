@@ -1,4 +1,4 @@
-from src.audio.models.channel import Channel
+from src.audio import Channel
 
 
 def compute_energy(samples: Channel):
