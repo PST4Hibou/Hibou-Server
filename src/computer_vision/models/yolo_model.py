@@ -1,5 +1,6 @@
 from ultralytics import YOLO
 import logging
+import torch
 
 
 class YOLOModel:
@@ -9,6 +10,10 @@ class YOLOModel:
         try:
             self.model = YOLO(model_path)
             logging.info(f"✅ Loaded YOLO model: {model_path}")
+
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            self.model.to(device)
+            print("🔧 Using device:", device)
         except Exception as e:
             logging.error(f"❌ Failed to load YOLO model: {e}")
             raise
@@ -16,5 +21,9 @@ class YOLOModel:
     def track(self, frame):
         """Run tracking/detection on a frame."""
         # YOLOv8 and YOLOv11 support .track() or .predict() APIs
-        results = self.model.track(frame, stream=True)
+        # results = self.model.track(frame, stream=True)
+        results = self.model.track(frame, conf=0.3, iou=0.5)
         return results
+
+    def predict(self, frame):
+        return self.model.predict(frame, conf=0.3, iou=0.5, verbose=False)
