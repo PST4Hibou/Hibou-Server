@@ -6,12 +6,13 @@ from src.computer_vision.drone_detection import DroneDetection
 from src.audio.sources.file_source import FileAudioSource
 from src.ptz_devices.ptz_controller import PTZController
 from src.audio.sources.rtp_source import RTPAudioSource
-from src.audio.models.channel import Channel
 from src.audio.debug.radar import RadarPlot
 from src.audio.energy import compute_energy
 from src.audio.play import play_sample
+from src.ai.audio import ModelProxy
 from src.settings import SETTINGS
 from src.arguments import args
+from src.audio import Channel
 from src.logger import logger
 from collections import deque
 from time import sleep
@@ -21,13 +22,17 @@ import logging
 import os
 
 
+
 class AudioProcess:
     def __init__(self):
         self.audio_queue = deque(maxlen=1)
+        self.model = ModelProxy()
 
     def process(self, audio_samples: list[Channel]):
         # enhanced_audio = apply_noise_reduction(audio_samples)
-        self.audio_queue.append(audio_samples)
+        # self.audio_queue.append(audio_samples)
+
+        self.model.infer(audio_samples)
 
         if SETTINGS.AUDIO_PLAYBACK:  # Only for debug purposes
             play_sample(audio_samples, 0)

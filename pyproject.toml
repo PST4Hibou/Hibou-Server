@@ -22,4 +22,8 @@ dependencies = [
     "ultralytics>=8.3.221",
     "pyaudio>=0.2.14",
     "lap==0.5.12",
+    "torchaudio>=2.9.1",
+    "torchmetrics>=1.8.2",
+    "torchcodec>=0.8.1",
+    "librosa>=0.11.0",
 ]
