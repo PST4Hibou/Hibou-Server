@@ -6,12 +6,13 @@ from src.computer_vision.drone_detection import DroneDetection
 from src.audio.sources.file_source import FileAudioSource
 from src.ptz_devices.ptz_controller import PTZController
 from src.audio.sources.rtp_source import RTPAudioSource
-from src.audio.models.channel import Channel
 from src.audio.debug.radar import RadarPlot
 from src.audio.energy import compute_energy
 from src.audio.play import play_sample
+from src.ai.audio import ModelProxy
 from src.settings import SETTINGS
 from src.arguments import args
+from src.audio import Channel
 from src.logger import logger
 from collections import deque
 from time import sleep
@@ -21,13 +22,17 @@ import logging
 import os
 
 
+
 class AudioProcess:
     def __init__(self):
         self.audio_queue = deque(maxlen=1)
+        self.model = ModelProxy(args.audio_model)
 
     def process(self, audio_samples: list[Channel]):
         # enhanced_audio = apply_noise_reduction(audio_samples)
-        self.audio_queue.append(audio_samples)
+        # self.audio_queue.append(audio_samples)
+
+        self.model.infer(audio_samples)
 
         if SETTINGS.AUDIO_PLAYBACK:  # Only for debug purposes
             play_sample(audio_samples, 0)
@@ -57,8 +62,8 @@ if __name__ == "__main__":
     if args.infer_from_folder:
         source = FileAudioSource(
             folder_path=args.infer_from_folder,
-            channel_prefix="ch_",
-            channels_count=4,
+            channel_prefix=args.channel_prefix,
+            channels_count=args.channel_count,
             save_fp=recs_folder_name,
             enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
             record_duration=SETTINGS.REC_DURATION,
@@ -71,6 +76,7 @@ if __name__ == "__main__":
             record_duration=int(SETTINGS.REC_DURATION),
             rec_hz=int(SETTINGS.REC_HZ),
             stream_latency=int(SETTINGS.STREAM_LATENCY),
+            channel_prefix=args.channel_prefix,
         )
 
     audio = AudioProcess()

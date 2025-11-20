@@ -1,1 +1,0 @@
-type Channel = list[float]

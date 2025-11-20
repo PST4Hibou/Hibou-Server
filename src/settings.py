@@ -50,6 +50,8 @@ class Settings:
     AUDIO_ENERGY_SPECTRUM: bool = False  # Only for debug purposes
     AUDIO_RADAR: bool = False  # Only for debug purposes
     CV_VIDEO_PLAYBACK: bool = False  # Only for debug purposes
+    AI_NUM_PROC: int = 48
+    SEED: int = 0
 
 
 def parse_list(value: str):
@@ -93,6 +95,8 @@ try:
         AUDIO_ANGLE_COVERAGE=int(os.getenv("AUDIO_ANGLE_COVERAGE")),
         PTZ_START_AZIMUTH=int(os.getenv("PTZ_START_AZIMUTH")),
         PTZ_END_AZIMUTH=int(os.getenv("PTZ_END_AZIMUTH")),
+        AI_NUM_PROC=int(os.getenv("AI_NUM_PROC")),
+        SEED=int(os.getenv("SEED")),
     )
 except TypeError as e:
     raise ValueError(f"Invalid value in .env: {e}. Please check the .env file.")
