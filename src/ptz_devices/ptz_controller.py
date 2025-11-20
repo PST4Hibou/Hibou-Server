@@ -22,7 +22,6 @@ class PTZController:
         """
         # If camera already registered, return it
         if name in cls._instances:
-            logging.debug(f"Reusing existing PTZ instance for '{name}'")
             return cls._instances[name]
 
         # If vendor_class not provided for a new camera, raise error

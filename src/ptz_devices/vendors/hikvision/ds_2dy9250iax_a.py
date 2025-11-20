@@ -61,6 +61,13 @@ class DS2DY9250IAXA(BaseVendor):
         if hasattr(self, "_initialized") and self._initialized:
             return
 
+        if not host or not username or not password:
+            logging.warning(
+                "No username or password provided for PTZ connection. Skipping initialization."
+            )
+            self._initialized = False
+            return
+
         self._initialized = True  # Flag so __init__ runs only once
 
         self._host = host
@@ -224,6 +231,8 @@ class DS2DY9250IAXA(BaseVendor):
         return pan, tilt
 
     def get_video_stream(self):
+        if not self._initialized:
+            return None
         return self.rtsp_stream
 
     def start_continuous(
@@ -358,6 +367,8 @@ class DS2DY9250IAXA(BaseVendor):
         - The change in angle exceeds the tolerance, AND
         - At least 0.3 seconds have passed since the previous update.
         """
+        if not self._initialized:
+            return None
 
         now = time.time()
 
