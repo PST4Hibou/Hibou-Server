@@ -64,7 +64,6 @@ class FileAudioSource(GstreamerSource):
         self._enable_recording_saves = enable_recording_saves
 
         self._get_file_paths()
-        self._check_files()
 
         pipeline_strings = []
         rec_hz = SETTINGS.REC_HZ
@@ -72,15 +71,15 @@ class FileAudioSource(GstreamerSource):
         channel = 0
         for ch, files in enumerate(self._audio_paths):
             for idx, fp in enumerate(files):
-
                 gst_pipeline_str = (
                     f'filesrc location="{fp}" ! '
                     f"decodebin ! "
                     f"audioconvert ! "
                     f"audio/x-raw, format=F32LE ! "
                     f"audioresample ! "
+                    f"audio/x-raw, format=F32LE, rate=(int){rec_hz} ! "
                     f"identity sync=true ! "  # <--- throttle to realtime
-                    f"appsink name=appsink_ch{ch}_file{idx} "
+                    f"appsink name=appsink_{ch} "
                     f"drop=false max-buffers=1"
                 )
 
@@ -92,8 +91,11 @@ class FileAudioSource(GstreamerSource):
                         f'filesrc location="{fp}" ! '
                         f"decodebin ! "
                         f"audioconvert ! "
-                        f"audioresample ! tee name=t "
-                        f"t. ! queue ! identity sync=true ! appsink name=appsink_ch{ch}_file{idx} "
+                        f"audio/x-raw, format=F32LE ! "
+                        f"audioresample ! "
+                        f"audio/x-raw, format=F32LE, rate=(int){rec_hz} ! "
+                        f"tee name=t "
+                        f"t. ! queue ! identity sync=true ! appsink name=appsink_{ch} "
                         f"t. ! queue ! audioconvert ! audioresample ! "
                         f'splitmuxsink location="{save_fp}/{channel}/%d.wav" '
                         f"muxer=wavenc max-size-time={record_duration}"
@@ -123,28 +125,3 @@ class FileAudioSource(GstreamerSource):
                 )
 
             self._audio_paths.append(files)
-
-    def _check_files(self):
-        """Validate that all files are 48 kHz and have the same duration."""
-        expected_rate = SETTINGS.REC_HZ
-        expected_frames = None
-
-        for ch, files in enumerate(self._audio_paths):
-            for fp in files:
-                if not os.path.isfile(fp):
-                    raise FileNotFoundError(f"Missing file: {fp}")
-
-                with sf.SoundFile(fp) as f:
-                    # Check samplerate
-                    if abs(f.samplerate - expected_rate) > 50:
-                        raise ValueError(
-                            f"Invalid samplerate in {fp} (got {f.samplerate}, expected {expected_rate})"
-                        )
-
-                    # Check consistent duration
-                    if expected_frames is None:
-                        expected_frames = len(f)
-                    elif len(f) != expected_frames:
-                        raise ValueError(
-                            f"Inconsistent file length in {fp}: {len(f)} vs expected {expected_frames}"
-                        )
