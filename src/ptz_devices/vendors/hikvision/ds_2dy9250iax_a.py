@@ -55,9 +55,17 @@ class DS2DY9250IAXA(BaseVendor):
         start_azimuth: int = None,
         end_azimuth: int = None,
         rtsp_port: int = 554,
+        video_channel: int = 1,
     ):
         # Prevent reinitialization if already initialized
         if hasattr(self, "_initialized") and self._initialized:
+            return
+
+        if not host or not username or not password:
+            logging.warning(
+                "No username or password provided for PTZ connection. Skipping initialization."
+            )
+            self._initialized = False
             return
 
         self._initialized = True  # Flag so __init__ runs only once
@@ -76,15 +84,13 @@ class DS2DY9250IAXA(BaseVendor):
         self._status: dict | None = None
         self._last_angle_update_time = 0
 
-        self.rtsp_url = (
-            f"rtsp://{username}:{password}@{host}:{rtsp_port}/Streaming/Channels/101/"
-        )
+        self.rtsp_url = f"rtsp://{username}:{password}@{host}:{rtsp_port}/Streaming/Channels/10{video_channel}/"
         self.rtsp_stream = cv2.VideoCapture(self.rtsp_url)
 
         if not self.rtsp_stream.isOpened():
             logging.error("❌ Cannot open RTSP stream. Check the URL or credentials.")
             logging.error(
-                f"RTSP URL: rtsp://{username}:XXX@{host}:{rtsp_port}/Streaming/Channels/101/"
+                f"RTSP URL: rtsp://{username}:XXX@{host}:{rtsp_port}/Streaming/Channels/10{video_channel}/"
             )
         else:
             logging.info("rtsp stream opened")
@@ -225,6 +231,8 @@ class DS2DY9250IAXA(BaseVendor):
         return pan, tilt
 
     def get_video_stream(self):
+        if not self._initialized:
+            return None
         return self.rtsp_stream
 
     def start_continuous(
@@ -359,6 +367,8 @@ class DS2DY9250IAXA(BaseVendor):
         - The change in angle exceeds the tolerance, AND
         - At least 0.3 seconds have passed since the previous update.
         """
+        if not self._initialized:
+            return None
 
         now = time.time()
 
