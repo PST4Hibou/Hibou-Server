@@ -1,3 +1,4 @@
+from src.arguments import args
 import gi
 
 gi.require_version("Gst", "1.0")
@@ -5,11 +6,10 @@ from gi.repository import Gst
 
 
 class GStreamerEngine:
-
     def __init__(self, pipelines_strs: list[str], on_sample):
         # Setting GST's logging level to output.
         # see https://gstreamer.freedesktop.org/documentation/tutorials/basic/debugging-tools.html
-        # Gst.debug_set_default_threshold(Gst.DebugLevel.WARNING)
+        Gst.debug_set_default_threshold(args.gst_dbg_level)
 
         if not Gst.init_check(None):
             raise RuntimeError("Could not initialize GStreamer")
