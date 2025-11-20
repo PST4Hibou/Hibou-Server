@@ -30,8 +30,8 @@ parser.add_argument("--doctor", action="store_true", help="Run doctor")
 parser.add_argument(
     "--ptz-calibration", action="store_true", help="Run PTZ calibration"
 )
-parser.add_argument("--channel-prefix", default="", help="Set the save channel prefix", type=str)
-parser.add_argument("--channel-count", default=4, help="Run doctor", type=int)
+parser.add_argument("--channel-prefix", default="", help="Set the save/read channel directory name prefix", type=str)
+parser.add_argument("--channel-count", default=4, help="Set the number of channels. This used only when --infer-from-folder is set.", type=int)
 parser.add_argument("--gst-dbg-level", default="NONE", help="Set the GStreamer debug level. See https://gstreamer.freedesktop.org/documentation/tutorials/basic/debugging-tools.html", type=gst_dbg_level_validator)
 
 args = parser.parse_args()
