@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Union
+from src.logger import logger
 
 from torch.utils.data import DataLoader
 from torch import nn, optim, Tensor
@@ -19,6 +20,8 @@ from sys import path
 import importlib.util
 import sys
 
+from src.ai import has_cuda
+
 def load_module(file_path, module_name):
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     module = importlib.util.module_from_spec(spec)
@@ -37,21 +40,34 @@ class ModelProxy:
             self._enable = False
             return
 
-        self._enable = False
+        self._enable = True
+        self.is_src_parallel = False
+        self.model_name = model_name
 
-        module = load_module("./assets/models/" + model_name + ".py", "external_module")
+        self._load_model()
+
+        self._disables = torch.no_grad()
+
+    def _load_model(self):
+        module = load_module("./assets/models/" + self.model_name + ".py", "external_module")
         self._model = module.ModelBuilder()
 
-        if torch.cuda.is_available():
-            self._model.load_state_dict(torch.load("./assets/models/" + model_name + ".pt"))
+        # We need to ensure that we put on CPU when CUDA's not
+        # available, or we may trigger model load issues when the
+        # model was previoulsy on GPU before save.
+        state = torch.load("./assets/models/" + self.model_name + ".pt") if has_cuda else torch.load("./assets/models/" + self.model_name + ".pt", map_location=torch.device("cpu"))
+
+        # Detect if DataParallel was used
+        self.is_src_parallel = any(k.startswith("module.") for k in state.keys())
+        self._model.load_state_dict(state)
+
+        if has_cuda:
             if torch.cuda.device_count() > 1:
                 self._model = nn.DataParallel(self._model)
+                logger.info(f"Enable parallel data processing for '{self.model_name}' model.")
             self._model.to("cuda")
-        else:
-            self._model.load_state_dict(torch.load("./assets/models/" + model_name + ".pt", map_location=torch.device("cpu")))
 
         self._model.eval()
-        self._disables = torch.no_grad()
 
     def infer(self, audios: list):
         if self._enable:

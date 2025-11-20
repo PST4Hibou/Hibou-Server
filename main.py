@@ -26,7 +26,7 @@ import os
 class AudioProcess:
     def __init__(self):
         self.audio_queue = deque(maxlen=1)
-        self.model = ModelProxy()
+        self.model = ModelProxy(args.audio_model)
 
     def process(self, audio_samples: list[Channel]):
         # enhanced_audio = apply_noise_reduction(audio_samples)
