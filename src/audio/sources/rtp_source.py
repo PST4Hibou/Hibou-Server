@@ -13,6 +13,7 @@ class RTPAudioSource(GstreamerSource):
         enable_recording_saves: bool,
         save_fp: str,
         record_duration: int,
+        channel_prefix: str,
         rec_hz: int,
         stream_latency: int,
     ):
@@ -94,7 +95,7 @@ class RTPAudioSource(GstreamerSource):
                     f"max-size-time={record_duration} "
                     f"t1. ! audioconvert ! audioresample ! "
                     f"volume volume={SETTINGS.AUDIO_VOLUME} !"
-                    f'splitmuxsink location="{save_fp}/{channel + 1}/%d.wav" muxer=wavenc '
+                    f'splitmuxsink location="{save_fp}/{channel_prefix}{channel + 1}/%d.wav" muxer=wavenc '
                     f"max-size-time={record_duration}"
                 )
 

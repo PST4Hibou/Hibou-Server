@@ -18,6 +18,8 @@ parser.add_argument("--doctor", action="store_true", help="Run doctor")
 parser.add_argument(
     "--ptz-calibration", action="store_true", help="Run PTZ calibration"
 )
+parser.add_argument("--channel-prefix", default="", help="Set the save channel prefix", type=str)
+parser.add_argument("--channel-count", default=4, help="Run doctor", type=int)
 
 args = parser.parse_args()
 

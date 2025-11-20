@@ -62,8 +62,8 @@ if __name__ == "__main__":
     if args.infer_from_folder:
         source = FileAudioSource(
             folder_path=args.infer_from_folder,
-            channel_prefix="ch_",
-            channels_count=4,
+            channel_prefix=args.channel_prefix,
+            channels_count=args.channel_count,
             save_fp=recs_folder_name,
             enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
             record_duration=SETTINGS.REC_DURATION,
@@ -76,6 +76,7 @@ if __name__ == "__main__":
             record_duration=int(SETTINGS.REC_DURATION),
             rec_hz=int(SETTINGS.REC_HZ),
             stream_latency=int(SETTINGS.STREAM_LATENCY),
+            channel_prefix=args.channel_prefix,
         )
 
     audio = AudioProcess()
