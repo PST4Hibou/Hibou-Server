@@ -55,6 +55,7 @@ class DS2DY9250IAXA(BaseVendor):
         start_azimuth: int = None,
         end_azimuth: int = None,
         rtsp_port: int = 554,
+        video_channel: int = 1,
     ):
         # Prevent reinitialization if already initialized
         if hasattr(self, "_initialized") and self._initialized:
@@ -76,15 +77,13 @@ class DS2DY9250IAXA(BaseVendor):
         self._status: dict | None = None
         self._last_angle_update_time = 0
 
-        self.rtsp_url = (
-            f"rtsp://{username}:{password}@{host}:{rtsp_port}/Streaming/Channels/101/"
-        )
+        self.rtsp_url = f"rtsp://{username}:{password}@{host}:{rtsp_port}/Streaming/Channels/10{video_channel}/"
         self.rtsp_stream = cv2.VideoCapture(self.rtsp_url)
 
         if not self.rtsp_stream.isOpened():
             logging.error("❌ Cannot open RTSP stream. Check the URL or credentials.")
             logging.error(
-                f"RTSP URL: rtsp://{username}:XXX@{host}:{rtsp_port}/Streaming/Channels/101/"
+                f"RTSP URL: rtsp://{username}:XXX@{host}:{rtsp_port}/Streaming/Channels/10{video_channel}/"
             )
         else:
             logging.info("rtsp stream opened")

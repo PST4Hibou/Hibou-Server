@@ -87,6 +87,8 @@ if __name__ == "__main__":
         password=SETTINGS.PTZ_PASSWORD,
         start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
         end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
+        rtsp_port=SETTINGS.PTZ_RTSP_PORT,
+        video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
     )
 
     stream = PTZController("main_camera").get_video_stream()
