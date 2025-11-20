@@ -95,4 +95,4 @@ try:
         PTZ_END_AZIMUTH=int(os.getenv("PTZ_END_AZIMUTH")),
     )
 except TypeError as e:
-    raise ValueError(f"Invalid value in .env: {e}")
+    raise ValueError(f"Invalid value in .env: {e}. Please check the .env file.")
