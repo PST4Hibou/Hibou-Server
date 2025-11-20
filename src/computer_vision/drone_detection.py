@@ -68,7 +68,6 @@ class DroneDetection:
         if self._thread:
             self._thread.join(timeout=2)
             self._thread = None
-        logging.info("🛑 Detection stopped.")
 
     def is_running(self) -> bool:
         """Check if detection thread is active."""

@@ -137,6 +137,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nStopping audio...")
     finally:
-        PTZController.remove("main_camera")
         drone_detector.stop()
+        PTZController.remove("main_camera")
         source.stop()
