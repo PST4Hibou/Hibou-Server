@@ -22,6 +22,7 @@ import sys
 
 from src.ai import has_cuda
 
+
 def load_module(file_path, module_name):
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     module = importlib.util.module_from_spec(spec)
@@ -31,7 +32,7 @@ def load_module(file_path, module_name):
 
 
 def convert_to_linear_spectrogram(audios: list):
-    return [torch.tensor(librosa.amplitude_to_db(np.abs(librosa.stft(np.array(a, dtype=np.float32), n_fft=2048, hop_length=512)), ref=np.max)) for a in audios]
+    return torch.stack([torch.tensor(librosa.amplitude_to_db(np.abs(librosa.stft(np.array(a, dtype=np.float32), n_fft=2048, hop_length=512)), ref=np.max)).unsqueeze(0) for a in audios])
 
 
 class ModelProxy:
@@ -64,12 +65,13 @@ class ModelProxy:
         if has_cuda:
             if torch.cuda.device_count() > 1:
                 self._model = nn.DataParallel(self._model)
-                logger.info(f"Enable parallel data processing for '{self.model_name}' model.")
+                logger.info(f"Enabled parallel data processing for '{self.model_name}' model.")
             self._model.to("cuda")
 
         self._model.eval()
 
     def infer(self, audios: list):
         if self._enable:
-            inputs = convert_to_linear_spectrogram(audios)
-            print([torch.argmax(self._model(i), dim=1) for i in inputs])
+            return torch.argmax(self._model(convert_to_linear_spectrogram(audios)), dim=1).numpy()
+
+        return np.zeros(len(audios), dtype=int)
