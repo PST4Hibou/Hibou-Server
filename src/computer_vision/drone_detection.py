@@ -17,17 +17,17 @@ class DroneDetection:
         self._thread: threading.Thread | None = None
         self._stream: cv2.VideoCapture | None = None
 
-        logging.info(f"🚀 DroneDetection initialized with model: {model_type}")
+        logging.info(f"DroneDetection initialized with model: {model_type}")
 
     def _run_detection(self, display: bool = True):
         """Internal method running detection loop in a thread."""
         # while True:
         #     print("hello")
         if self._stream is None or not self._stream.isOpened():
-            logging.error("❌ Invalid stream")
+            logging.error("Invalid stream")
             return
 
-        logging.info("🛰️ Detection loop started")
+        logging.info("Detection loop started")
 
         while not self._stop_event.is_set():
 
@@ -37,7 +37,7 @@ class DroneDetection:
 
             # FASTEST WAY — YOLO predict()
             results = self.model.predict(frame)
-
+            print(results)
             frame = draw_detections(frame, results)
 
             if display:
@@ -46,7 +46,7 @@ class DroneDetection:
                     self.stop()
                     break
 
-        logging.info("🧹 Detection loop ended")
+        logging.info("Detection loop ended")
         cv2.destroyAllWindows()
 
     def start(self, stream: cv2.VideoCapture, display: bool = True):

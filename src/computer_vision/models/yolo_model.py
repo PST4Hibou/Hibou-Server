@@ -13,7 +13,7 @@ class YOLOModel:
 
             device = "cuda" if torch.cuda.is_available() else "cpu"
             self.model.to(device)
-            print("🔧 Using device:", device)
+            logging.info(f"YOLO Using device: {device}")
         except Exception as e:
             logging.error(f"❌ Failed to load YOLO model: {e}")
             raise
