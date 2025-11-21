@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 
 import numpy as np
+import librosa
 
 
 class ChannelTimeSpectrogram:
@@ -41,7 +42,10 @@ class ChannelTimeSpectrogram:
         self.fig.tight_layout()
         self.fig.show()
 
-    def update(self, energies):
+    def update(self):
+        self.fig.canvas.flush_events()
+
+    def set_input(self, energies):
         """
         Insert the latest frame of energy values (1D array: num_channels)
         into the scrolling heatmap.
@@ -69,4 +73,42 @@ class ChannelTimeSpectrogram:
         self.im.set_clim(0, 200)
 
         self.fig.canvas.draw()
+
+
+def convert_to_linear_spectrogram(audios: list):
+    return [np.array(librosa.amplitude_to_db(np.abs(librosa.stft(np.array(a, dtype=np.float32), n_fft=2048, hop_length=512)), ref=np.max), dtype=np.float32) for a in audios]
+
+class StftSpectrogram:
+    def __init__(self, num_mics=8, frame_duration_s=0.5):
+        self.num_mics = num_mics
+
+        self.data = np.zeros((1025 * num_mics, 12))
+        print(self.data.shape)
+
+        plt.ion()
+        self.fig, self.ax = plt.subplots(figsize=(8, 6))
+
+        # Create the initial heatmap
+        self.im = self.ax.imshow(
+            self.data,
+            origin="lower",  # time increasing upward
+            aspect="auto",
+            cmap="viridis",  # or "hot", "inferno"
+            interpolation="nearest",
+        )
+
+        self.fig.tight_layout()
+        self.fig.show()
+
+    def update(self):
         self.fig.canvas.flush_events()
+
+    def set_input(self, audios):
+        data = np.stack(convert_to_linear_spectrogram(audios))
+        self.data = data.reshape(data.shape[0] * data.shape[1], data.shape[2])
+
+        # Update the heatmap
+        self.im.set_data(self.data)
+        self.im.set_clim(np.min(self.data), np.max(self.data))
+
+        self.fig.canvas.draw()

@@ -37,7 +37,10 @@ class RadarPlot:
         plt.ion()
         plt.show(block=False)
 
-    def update(self, angle, energy):
+    def update(self):
+        self.fig.canvas.flush_events()
+
+    def set_input(self, angle, energy):
         """
         angle: single angle in degrees
         energy: single energy value
@@ -52,4 +55,3 @@ class RadarPlot:
         self.text_angle.set_text(f"Angle: {angle:.1f}°")
 
         self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
