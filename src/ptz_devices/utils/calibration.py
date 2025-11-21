@@ -1,4 +1,7 @@
+from ..vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
 from .ui_controller import start_ui_controller
+from ..ptz_controller import PTZController
+from ...settings import SETTINGS
 
 
 def start_ptz_calibration():
@@ -29,7 +32,18 @@ def start_ptz_calibration():
     Example usage:
         start_ptz_calibration()
     """
-    # ptz = DS2DY9250IAXA(SETTINGS.PTZ_HOST, SETTINGS.PTZ_USERNAME, SETTINGS.PTZ_PASSWORD)
+
+    PTZController(
+        "main_camera",
+        DS2DY9250IAXA,
+        host=SETTINGS.PTZ_HOST,
+        username=SETTINGS.PTZ_USERNAME,
+        password=SETTINGS.PTZ_PASSWORD,
+        start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
+        end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
+        rtsp_port=SETTINGS.PTZ_RTSP_PORT,
+        video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
+    )
 
     start_ui_controller(
         "main_camera",
