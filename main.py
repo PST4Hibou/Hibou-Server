@@ -1,5 +1,5 @@
-from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
 from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram, StftSpectrogram
+from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
 from src.adc_devices.adc_device_manager import ADCDeviceManager
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
 from src.computer_vision.drone_detection import DroneDetection
@@ -54,7 +54,7 @@ class AudioProcess:
 if __name__ == "__main__":
     logger.debug(f"Loaded settings: {SETTINGS}")
     devices = ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
-    #devices = ADCDeviceManager.auto_discover()
+    # devices = ADCDeviceManager.auto_discover()
 
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")
@@ -138,9 +138,9 @@ if __name__ == "__main__":
 
                 energies = [compute_energy(ch) for ch in channels]
 
-                angle = angle_estimator.estimate(energies)
+                phi_angle = angle_estimator.estimate(energies)
 
-                PTZController("main_camera").go_to_angle(angle)
+                PTZController("main_camera").go_to_angle(phi=phi_angle)
 
                 # Only for debug purposes
                 if SETTINGS.AUDIO_ENERGY_SPECTRUM and energy_spectrum_plot is not None:
@@ -152,7 +152,7 @@ if __name__ == "__main__":
 
                 # Only for debug purposes
                 if SETTINGS.AUDIO_RADAR and radar_plot is not None:
-                    radar_plot.set_input(angle, max(energies))
+                    radar_plot.set_input(phi_angle, max(energies))
 
             if radar_plot:
                 radar_plot.update()

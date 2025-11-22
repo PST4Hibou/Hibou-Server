@@ -80,7 +80,8 @@ class DS2DY9250IAXA(BaseVendor):
         self._current_elevation = 0
         self._current_azimuth = 0
         self._current_zoom = 0
-        self._current_x_angle = -50
+        self._current_phi_angle = -50
+        self._current_theta_angle = -50
         self._status: dict | None = None
         self._last_angle_update_time = 0
 
@@ -360,32 +361,54 @@ class DS2DY9250IAXA(BaseVendor):
             + self._start_azimuth
         )
 
-    def go_to_angle(self, angle: float) -> None:
+    def _angle_to_elevation(self, angle: float) -> int:
+        """Convert logical angle to azimuth value within the configured range."""
+        return math.floor(
+            (angle - 0) * (self._end_azimuth - self._start_azimuth) / (90 - 0)
+            + self._start_azimuth
+        )
+
+    def go_to_angle(self, phi: float = None, theta: float = None) -> bool:
         """
         Converts a logical angle into azimuth range and moves the camera.
         Only sends a command if:
         - The change in angle exceeds the tolerance, AND
-        - At least 0.3 seconds have passed since the previous update.
+        - At least MIN_INTERVAL seconds have passed since the previous update.
         """
         if not self._initialized:
-            return None
+            return False
+
+        if phi is None and theta is None:
+            return False
 
         now = time.time()
+        dt = now - self._last_angle_update_time
 
-        # Skip if the change is too small or too soon
-        if (
-            abs(angle - self._current_x_angle) < self.ANGLE_TOLERANCE
-            or (now - self._last_angle_update_time) < self.MIN_INTERVAL
-        ):
-            return
+        # Use existing angles if arg is None
+        target_phi = phi if phi is not None else self._current_phi_angle
+        target_theta = theta if theta is not None else self._current_theta_angle
 
-        self._last_angle_update_time = now
-        self._current_x_angle = angle
+        delta_phi = abs(target_phi - self._current_phi_angle)
+        delta_theta = abs(target_theta - self._current_theta_angle)
 
-        azimuth = self._angle_to_azimuth(angle)
-        self.set_absolute_ptz_position(
-            self._current_elevation, azimuth, self._current_zoom
+        # Check tolerance and minimal time interval
+        angle_change_small = (delta_phi < self.ANGLE_TOLERANCE) and (
+            delta_theta < self.ANGLE_TOLERANCE
         )
+        too_soon = dt < self.MIN_INTERVAL
+
+        if angle_change_small or too_soon:
+            return False
+
+        # Update internal state
+        self._last_angle_update_time = now
+        self._current_phi_angle = target_phi
+        self._current_theta_angle = target_theta
+
+        azimuth = self._angle_to_azimuth(target_phi)
+        elevation = target_theta  # TODO: Find correct map.
+
+        return self.set_absolute_ptz_position(elevation, azimuth, self._current_zoom)
 
     def release_stream(self):
         """Safely release the RTSP stream."""
