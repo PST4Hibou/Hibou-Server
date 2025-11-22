@@ -22,7 +22,6 @@ import logging
 import os
 
 
-
 class AudioProcess:
     def __init__(self):
         self.audio_queue = deque(maxlen=1)
@@ -30,7 +29,7 @@ class AudioProcess:
 
     def process(self, audio_samples: list[Channel]):
         # enhanced_audio = apply_noise_reduction(audio_samples)
-        # self.audio_queue.append(audio_samples)
+        self.audio_queue.append(audio_samples)
 
         self.model.infer(audio_samples)
 
@@ -139,6 +138,13 @@ if __name__ == "__main__":
                 # Only for debug purposes
                 if SETTINGS.AUDIO_RADAR and radar_plot is not None:
                     radar_plot.update(angle, max(energies))
+
+            if not drone_detector.is_empty():
+                results = drone_detector.get_last_results()
+
+                for result in results:
+                    pass
+                    # print(result.boxes)
 
     except KeyboardInterrupt:
         print("\nStopping audio...")

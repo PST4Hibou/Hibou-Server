@@ -1,11 +1,11 @@
-# computer_vision/object_detection.py
+from ultralytics.engine.results import Results
+from .models.yolo_model import YOLOModel
+from .utils import draw_detections
+from collections import deque
+
 import threading
 import logging
 import cv2
-from time import time
-
-from .models.yolo_model import YOLOModel
-from .utils import draw_detections
 
 
 class DroneDetection:
@@ -16,6 +16,8 @@ class DroneDetection:
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self._stream: cv2.VideoCapture | None = None
+
+        self.results_queue = deque(maxlen=1)
 
         logging.info(f"🚀 DroneDetection initialized with model: {model_type}")
 
@@ -37,6 +39,7 @@ class DroneDetection:
 
             # FASTEST WAY — YOLO predict()
             results = self.model.predict(frame)
+            self.results_queue.append(results)
 
             frame = draw_detections(frame, results)
 
@@ -48,6 +51,15 @@ class DroneDetection:
 
         logging.info("🧹 Detection loop ended")
         cv2.destroyAllWindows()
+
+    def get_last_results(self) -> list[Results] | None:
+        try:
+            return self.results_queue.pop()
+        except IndexError:
+            return None
+
+    def is_empty(self) -> bool:
+        return len(self.results_queue) == 0
 
     def start(self, stream: cv2.VideoCapture, display: bool = True):
         """Start detection in a background thread."""
