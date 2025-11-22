@@ -1,4 +1,5 @@
 from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
+from src.ptz_devices.vendors.custom.computer_camera import ComputerCamera
 from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram, StftSpectrogram
 from src.adc_devices.adc_device_manager import ADCDeviceManager
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
@@ -54,7 +55,7 @@ class AudioProcess:
 if __name__ == "__main__":
     logger.debug(f"Loaded settings: {SETTINGS}")
     devices = ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
-    #devices = ADCDeviceManager.auto_discover()
+    # devices = ADCDeviceManager.auto_discover()
 
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")
@@ -89,19 +90,23 @@ if __name__ == "__main__":
         model_type="yolo", model_path="assets/computer_vision_models/yolov8n.pt"
     )
 
+    # PTZController(
+    #     "main_camera",
+    #     DS2DY9250IAXA,
+    #     host=SETTINGS.PTZ_HOST,
+    #     username=SETTINGS.PTZ_USERNAME,
+    #     password=SETTINGS.PTZ_PASSWORD,
+    #     start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
+    #     end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
+    #     rtsp_port=SETTINGS.PTZ_RTSP_PORT,
+    #     video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
+    # )
     PTZController(
-        "main_camera",
-        DS2DY9250IAXA,
-        host=SETTINGS.PTZ_HOST,
-        username=SETTINGS.PTZ_USERNAME,
-        password=SETTINGS.PTZ_PASSWORD,
-        start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
-        end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
-        rtsp_port=SETTINGS.PTZ_RTSP_PORT,
-        video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
+        "computer_camera",
+        ComputerCamera,
+        video_channel=0,
     )
-
-    stream = PTZController("main_camera").get_video_stream()
+    stream = PTZController("computer_camera").get_video_stream()
 
     nb_channels = len(devices) * 2
     frame_duration_s = SETTINGS.REC_DURATION / 1000

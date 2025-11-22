@@ -12,14 +12,14 @@ class BaseVendor(abc.ABC):
     and implement the abstract methods.
     """
 
-    @abc.abstractmethod
     def set_absolute_ptz_position(
         self, elevation: float, azimuth: float, zoom: float
     ) -> bool:
         """Move the camera to an absolute PTZ position."""
-        pass
+        raise NotImplementedError(
+            "This vendor does not implement absolute PTZ positioning."
+        )
 
-    @abc.abstractmethod
     def start_continuous(
         self,
         speed: int = 5,
@@ -28,17 +28,19 @@ class BaseVendor(abc.ABC):
         tilt_clockwise: bool = True,
     ) -> bool:
         """Start continuous PTZ motion (panning/tilting)."""
-        pass
+        raise NotImplementedError(
+            "This vendor does not implement continuous PTZ motion."
+        )
 
-    @abc.abstractmethod
     def stop_continuous(self) -> None:
         """Stop all ongoing PTZ motion."""
-        pass
+        raise NotImplementedError(
+            "This vendor does not implement stopping continuous PTZ motion."
+        )
 
-    @abc.abstractmethod
     def get_status(self, force_update: bool = False) -> dict:
         """Return the current PTZ camera status."""
-        pass
+        raise NotImplementedError("This vendor does not implement status retrieval.")
 
     def get_video_stream(self):
         """Optional: subclasses can override to provide RTSP or other streams."""

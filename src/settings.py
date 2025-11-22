@@ -46,12 +46,12 @@ class Settings:
     PTZ_START_AZIMUTH: int
     PTZ_END_AZIMUTH: int
     AUDIO_ANGLE_COVERAGE: int
-    AUDIO_PLAYBACK: bool = True  # Only for debug purposes
-    AUDIO_ENERGY_SPECTRUM: bool = True  # Only for debug purposes
-    AUDIO_STFT_SPECTRUM: bool = True  # Only for debug purposes
+    AUDIO_PLAYBACK: bool = False  # Only for debug purposes
+    AUDIO_ENERGY_SPECTRUM: bool = False  # Only for debug purposes
+    AUDIO_STFT_SPECTRUM: bool = False  # Only for debug purposes
     AUDIO_RADAR: bool = False  # Only for debug purposes
-    CV_VIDEO_PLAYBACK: bool = False  # Only for debug purposes
-    AI_NUM_PROC: int = 48
+    CV_VIDEO_PLAYBACK: bool = True  # Only for debug purposes
+    AI_NUM_PROC: int = 4
     SEED: int = 0
 
 
