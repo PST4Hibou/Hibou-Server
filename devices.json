@@ -4,10 +4,11 @@
       "name": "AVIOAI2-5575d5",
       "model": "DAI2",
       "ipv4": "192.168.250.14",
-      "port": 5002,
+      "port": 5003,
       "multicast_ip": "239.69.250.255",
       "rtp_payload": 97,
-      "interface": "enp0s13f0u1u4"
+      "interface": "enp2s0",
+      "clock_rate": 48000
     }
   ]
 }

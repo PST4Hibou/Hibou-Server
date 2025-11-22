@@ -1,5 +1,5 @@
 from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
-from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram
+from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram, StftSpectrogram
 from src.adc_devices.adc_device_manager import ADCDeviceManager
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
 from src.computer_vision.drone_detection import DroneDetection
@@ -17,6 +17,7 @@ from src.logger import logger
 from collections import deque
 from time import sleep
 
+import numpy as np
 import datetime
 import logging
 import os
@@ -31,7 +32,11 @@ class AudioProcess:
         # enhanced_audio = apply_noise_reduction(audio_samples)
         self.audio_queue.append(audio_samples)
 
-        self.model.infer(audio_samples)
+        res = self.model.infer(audio_samples)
+        if np.any(res):
+            print(f"DRONE: {res}")
+        else:
+            print(f"NONE: {res}")
 
         if SETTINGS.AUDIO_PLAYBACK:  # Only for debug purposes
             play_sample(audio_samples, 0)
@@ -49,7 +54,7 @@ class AudioProcess:
 if __name__ == "__main__":
     logger.debug(f"Loaded settings: {SETTINGS}")
     devices = ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
-    # devices = Devices.auto_discover()
+    #devices = ADCDeviceManager.auto_discover()
 
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")
@@ -110,6 +115,11 @@ if __name__ == "__main__":
         if SETTINGS.AUDIO_ENERGY_SPECTRUM
         else None
     )
+    stft_spectrum_plot = (
+        StftSpectrogram(nb_channels, frame_duration_s)
+        if SETTINGS.AUDIO_STFT_SPECTRUM
+        else None
+    )
 
     # Only for debug purposes
     radar_plot = RadarPlot() if SETTINGS.AUDIO_RADAR else None
@@ -125,6 +135,7 @@ if __name__ == "__main__":
 
             if not audio.is_empty():
                 channels = audio.get_last_channels()
+
                 energies = [compute_energy(ch) for ch in channels]
 
                 angle = angle_estimator.estimate(energies)
@@ -133,11 +144,22 @@ if __name__ == "__main__":
 
                 # Only for debug purposes
                 if SETTINGS.AUDIO_ENERGY_SPECTRUM and energy_spectrum_plot is not None:
-                    energy_spectrum_plot.update(energies)
+                    energy_spectrum_plot.set_input(energies)
+
+                # Only for debug purposes
+                if SETTINGS.AUDIO_STFT_SPECTRUM and stft_spectrum_plot is not None:
+                    stft_spectrum_plot.set_input(channels)
 
                 # Only for debug purposes
                 if SETTINGS.AUDIO_RADAR and radar_plot is not None:
-                    radar_plot.update(angle, max(energies))
+                    radar_plot.set_input(angle, max(energies))
+
+            if radar_plot:
+                radar_plot.update()
+            if stft_spectrum_plot:
+                stft_spectrum_plot.update()
+            if energy_spectrum_plot:
+                energy_spectrum_plot.update()
 
             if not drone_detector.is_empty():
                 results = drone_detector.get_last_results()

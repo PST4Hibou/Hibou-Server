@@ -19,17 +19,17 @@ class DroneDetection:
 
         self.results_queue = deque(maxlen=1)
 
-        logging.info(f"🚀 DroneDetection initialized with model: {model_type}")
+        logging.info(f"DroneDetection initialized with model: {model_type}")
 
     def _run_detection(self, display: bool = True):
         """Internal method running detection loop in a thread."""
         # while True:
         #     print("hello")
         if self._stream is None or not self._stream.isOpened():
-            logging.error("❌ Invalid stream")
+            logging.error("Invalid stream")
             return
 
-        logging.info("🛰️ Detection loop started")
+        logging.info("Detection loop started")
 
         while not self._stop_event.is_set():
 

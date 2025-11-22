@@ -26,4 +26,5 @@ dependencies = [
     "torchmetrics>=1.8.2",
     "torchcodec>=0.8.1",
     "librosa>=0.11.0",
+    "numba>=0.62.1",
 ]

@@ -68,14 +68,15 @@ class RTPAudioSource(GstreamerSource):
 
             gst_pipeline_str = (
                 f"udpsrc address={ip_address} port={port} multicast-iface={dev.interface} "
-                f'caps="application/x-rtp, media=(string)audio, clock-rate=(int){rec_hz}, '
+                f'caps="application/x-rtp, media=(string)audio, clock-rate=(int){dev.clock_rate}, '
                 f'channels=(int)2, encoding-name=(string)L24, payload=(int){payload}" ! '
                 f"rtpjitterbuffer latency={stream_latency} ! "
                 f"rtpL24depay ! "
                 f"queue ! "
                 f"audioconvert ! "
                 f"volume volume={SETTINGS.AUDIO_VOLUME} !"
-                f"audio/x-raw, format=F32LE, channels=(int)2 ! "
+                f"audioresample ! "
+                f"audio/x-raw, format=F32LE, channels=(int)2, rate={rec_hz} ! "
                 f"deinterleave name=d "
                 f"d.src_0 ! tee name=t0 "
                 f"d.src_1 ! tee name=t1 "
@@ -91,9 +92,12 @@ class RTPAudioSource(GstreamerSource):
 
                 gst_pipeline_str += (
                     f" t0. ! audioconvert ! audioresample ! "
+                    f"audioresample ! "
+                    f"audio/x-raw, format=F32LE, channels=(int)2, rate={rec_hz} ! "
                     f'splitmuxsink location="{save_fp}/{channel}/%d.wav" muxer=wavenc '
                     f"max-size-time={record_duration} "
                     f"t1. ! audioconvert ! audioresample ! "
+                    f"audio/x-raw, format=F32LE, channels=(int)2, rate={rec_hz} ! "
                     f"volume volume={SETTINGS.AUDIO_VOLUME} !"
                     f'splitmuxsink location="{save_fp}/{channel_prefix}{channel + 1}/%d.wav" muxer=wavenc '
                     f"max-size-time={record_duration}"

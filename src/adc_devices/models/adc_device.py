@@ -12,6 +12,7 @@ class ADCDevice:
     multicast_ip: str
     rtp_payload: int
     interface: str
+    clock_rate: int
 
     def is_online(self):
         return ping(self.ipv4)

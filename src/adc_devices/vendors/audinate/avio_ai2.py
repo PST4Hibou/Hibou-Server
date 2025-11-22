@@ -69,4 +69,5 @@ class AVIOAI2Manager(BaseVendor):
             multicast_ip=res.get("multicast_ip"),
             rtp_payload=res.get("rtp_payload"),
             interface=interface,
+            clock_rate=48000,
         )
