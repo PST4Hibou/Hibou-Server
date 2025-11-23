@@ -54,7 +54,7 @@ class AudioProcess:
 if __name__ == "__main__":
     logger.debug(f"Loaded settings: {SETTINGS}")
     devices = ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
-    #devices = ADCDeviceManager.auto_discover()
+    # devices = ADCDeviceManager.auto_discover()
 
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")
@@ -69,17 +69,17 @@ if __name__ == "__main__":
             channel_prefix=args.channel_prefix,
             channels_count=args.channel_count,
             save_fp=recs_folder_name,
-            enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
-            record_duration=SETTINGS.REC_DURATION,
+            enable_recording_saves=SETTINGS.REC_ENABLE,
+            record_duration=SETTINGS.AUDIO_CHUNK_DURATION,
         )
     else:
         source = RTPAudioSource(
             devices=devices,
-            enable_recording_saves=SETTINGS.ENABLE_REC_SAVE,
+            enable_recording_saves=SETTINGS.REC_ENABLE,
             save_fp=recs_folder_name,
-            record_duration=int(SETTINGS.REC_DURATION),
-            rec_hz=int(SETTINGS.REC_HZ),
-            stream_latency=int(SETTINGS.STREAM_LATENCY),
+            record_duration=int(SETTINGS.AUDIO_CHUNK_DURATION),
+            rec_hz=int(SETTINGS.AUDIO_REC_HZ),
+            stream_latency=int(SETTINGS.AUDIO_STREAM_LATENCY),
             channel_prefix=args.channel_prefix,
         )
 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     stream = PTZController("main_camera").get_video_stream()
 
     nb_channels = len(devices) * 2
-    frame_duration_s = SETTINGS.REC_DURATION / 1000
+    frame_duration_s = SETTINGS.AUDIO_CHUNK_DURATION / 1000
     angle_coverage = SETTINGS.AUDIO_ANGLE_COVERAGE
 
     angle_estimator = AngleOfArrivalEstimator(nb_channels, angle_coverage)
