@@ -25,19 +25,22 @@ if not load_dotenv():
 
 @dataclass
 class Settings:
-    ENABLE_REC_SAVE: bool
+    AUDIO_ANGLE_COVERAGE: int
+    AUDIO_CHUNK_DURATION: int
+    AUDIO_STREAM_LATENCY: int
+    AUDIO_REC_HZ: int
+    AUDIO_VOLUME: int
+
+    REC_ENABLE: bool
     REC_SAVE_FP: str
-    REC_DURATION: int  # in nanoseconds
-    REC_HZ: int
-    STREAM_LATENCY: int
+
     DEVICES_CONFIG_PATH: str
     STATIONARY: bool
-    DEVICE: str
+
     LOG_PATH: str
     LOG_CONF_PATH: str
     LOG_LEVEL: str
-    INFER_FROM_FOLDER: str
-    AUDIO_VOLUME: int
+
     PTZ_USERNAME: str
     PTZ_PASSWORD: str
     PTZ_HOST: str
@@ -45,14 +48,17 @@ class Settings:
     PTZ_RTSP_PORT: int
     PTZ_START_AZIMUTH: int
     PTZ_END_AZIMUTH: int
-    AUDIO_ANGLE_COVERAGE: int
-    AUDIO_PLAYBACK: bool = True  # Only for debug purposes
-    AUDIO_ENERGY_SPECTRUM: bool = True  # Only for debug purposes
-    AUDIO_STFT_SPECTRUM: bool = True  # Only for debug purposes
+
+    INFER_FROM_FOLDER: str
+    AI_NUM_PROC: int
+    AI_DEVICE: str
+    AI_SEED: int
+
+    AUDIO_PLAYBACK: bool = False  # Only for debug purposes
+    AUDIO_ENERGY_SPECTRUM: bool = False  # Only for debug purposes
+    AUDIO_STFT_SPECTRUM: bool = False  # Only for debug purposes
     AUDIO_RADAR: bool = False  # Only for debug purposes
     CV_VIDEO_PLAYBACK: bool = False  # Only for debug purposes
-    AI_NUM_PROC: int = 48
-    SEED: int = 0
 
 
 def parse_list(value: str):
@@ -75,14 +81,14 @@ try:
         Settings.CV_VIDEO_PLAYBACK = False
 
     SETTINGS = Settings(
-        ENABLE_REC_SAVE=parse_bool(os.getenv("ENABLE_REC_SAVE")),
+        REC_ENABLE=parse_bool(os.getenv("REC_ENABLE")),
         REC_SAVE_FP=os.getenv("REC_SAVE_FP"),
-        REC_DURATION=int(os.getenv("REC_DURATION")) * 10**6,  # ns
-        REC_HZ=int(os.getenv("REC_HZ")),
-        STREAM_LATENCY=int(os.getenv("STREAM_LATENCY")),
+        AUDIO_CHUNK_DURATION=int(os.getenv("AUDIO_CHUNK_DURATION")) * 10**6,  # ns
+        AUDIO_REC_HZ=int(os.getenv("AUDIO_REC_HZ")),
+        AUDIO_STREAM_LATENCY=int(os.getenv("AUDIO_STREAM_LATENCY")),
         DEVICES_CONFIG_PATH=os.getenv("DEVICES_CONFIG_PATH"),
         STATIONARY=parse_bool(os.getenv("STATIONARY")),
-        DEVICE=os.getenv("DEVICE"),
+        AI_DEVICE=os.getenv("AI_DEVICE"),
         LOG_PATH=os.getenv("LOG_PATH"),
         LOG_CONF_PATH=os.getenv("LOG_CONF_PATH"),
         LOG_LEVEL=os.getenv("LOG_LEVEL"),
@@ -97,7 +103,7 @@ try:
         PTZ_START_AZIMUTH=int(os.getenv("PTZ_START_AZIMUTH")),
         PTZ_END_AZIMUTH=int(os.getenv("PTZ_END_AZIMUTH")),
         AI_NUM_PROC=int(os.getenv("AI_NUM_PROC")),
-        SEED=int(os.getenv("SEED")),
+        AI_SEED=int(os.getenv("AI_SEED")),
     )
 except TypeError as e:
     raise ValueError(f"Invalid value in .env: {e}. Please check the .env file.")

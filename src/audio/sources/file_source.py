@@ -66,7 +66,7 @@ class FileAudioSource(GstreamerSource):
         self._get_file_paths()
 
         pipeline_strings = []
-        rec_hz = SETTINGS.REC_HZ
+        rec_hz = SETTINGS.AUDIO_REC_HZ
 
         channel = 0
         for ch, files in enumerate(self._audio_paths):
