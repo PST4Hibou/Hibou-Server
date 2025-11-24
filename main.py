@@ -7,6 +7,7 @@ from src.computer_vision.drone_detection import DroneDetection
 from src.audio.sources.file_source import FileAudioSource
 from src.ptz_devices.ptz_controller import PTZController
 from src.audio.sources.rtp_source import RTPAudioSource
+from src.tracking.pid_tracker import PIDTracker
 from src.audio.debug.radar import RadarPlot
 from src.audio.energy import compute_energy
 from src.audio.play import play_sample
@@ -101,12 +102,29 @@ if __name__ == "__main__":
         rtsp_port=SETTINGS.PTZ_RTSP_PORT,
         video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
     )
-    PTZController(
-        "opencv_vendor",
-        OpenCVStreamingVendor,
-        video_channel=0,
+    # PTZController(
+    #     "opencv_vendor",
+    #     OpenCVStreamingVendor,
+    #     video_channel="assets/videos/DJI drones noise comparson.mp4",
+    # )
+    stream = PTZController("main_camera").get_video_stream()
+
+    tracker = PIDTracker(
+        yaw_pid_coefs=PIDTracker.PidCoefs(
+            kp=0.5,
+            ki=0.1,
+            kd=0.05,
+            setpoint=0.0,
+            output_limits=(-30, 30),
+        ),
+        pitch_pid_coefs=PIDTracker.PidCoefs(
+            kp=0.5,
+            ki=0.1,
+            kd=0.05,
+            setpoint=0.0,
+            output_limits=(-30, 30),
+        ),
     )
-    stream = PTZController("opencv_vendor").get_video_stream()
 
     nb_channels = len(devices) * 2
     frame_duration_s = SETTINGS.AUDIO_CHUNK_DURATION / 1000
@@ -166,16 +184,17 @@ if __name__ == "__main__":
             if energy_spectrum_plot:
                 energy_spectrum_plot.update()
 
-            if not drone_detector.is_empty():
-                results = drone_detector.get_last_results()
-
-                for result in results:
-                    pass
-                    # print(result.boxes)
+            # Even when there is no result, we update the tracking
+            controls = tracker.update(
+                drone_detector.get_last_results(),
+            )
+            if controls is not None:
+                # Do whatever
+                print(controls)
 
     except KeyboardInterrupt:
         print("\nStopping audio...")
     finally:
         drone_detector.stop()
-        PTZController.remove("main_camera")
+        PTZController.remove("opencv_vendor")
         source.stop()

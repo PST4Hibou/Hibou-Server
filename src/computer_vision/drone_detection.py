@@ -41,9 +41,11 @@ class DroneDetection:
 
             # FASTEST WAY — YOLO predict()
             results = self.model.predict(frame)
-            self.results_queue.append(results)
 
-            frame = draw_detections(frame, results)
+            # If it contains drones
+            if any([len(result.boxes) > 0 for result in results]):
+                self.results_queue.append(results)
+                frame = draw_detections(frame, results)
 
             if display:
                 cv2.imshow("Drone Detection", frame)
