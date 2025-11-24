@@ -1,3 +1,5 @@
+import time
+
 from ultralytics.engine.results import Results
 from .models.yolo_model import YOLOModel
 from .utils import draw_detections
@@ -16,6 +18,7 @@ class DroneDetection:
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self._stream: cv2.VideoCapture | None = None
+        self._fps = 60.0
 
         self.results_queue = deque(maxlen=1)
 
@@ -23,8 +26,6 @@ class DroneDetection:
 
     def _run_detection(self, display: bool = True):
         """Internal method running detection loop in a thread."""
-        # while True:
-        #     print("hello")
         if self._stream is None or not self._stream.isOpened():
             logging.error("Invalid stream")
             return
@@ -32,6 +33,7 @@ class DroneDetection:
         logging.info("Detection loop started")
 
         while not self._stop_event.is_set():
+            start = time.time()
 
             ret, frame = self._stream.read()
             if not ret:
@@ -49,7 +51,11 @@ class DroneDetection:
                     self.stop()
                     break
 
-        logging.info("🧹 Detection loop ended")
+            elapsed = time.time() - start
+            sleep_time = max(0.0, (1.0 / self._fps) - elapsed)
+            time.sleep(sleep_time)
+
+        logging.info("Detection loop ended")
         cv2.destroyAllWindows()
 
     def get_last_results(self) -> list[Results] | None:
@@ -68,6 +74,7 @@ class DroneDetection:
             return
 
         self._stream = stream
+        self._fps = self._stream.get(cv2.CAP_PROP_FPS)
         self._stop_event.clear()
         self._thread = threading.Thread(
             target=self._run_detection, args=(display,), daemon=True

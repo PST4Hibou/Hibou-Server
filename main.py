@@ -1,4 +1,5 @@
 from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram, StftSpectrogram
+from src.ptz_devices.vendors.custom.opencv_stream import OpenCVStreamingVendor
 from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
 from src.adc_devices.adc_device_manager import ADCDeviceManager
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
@@ -86,7 +87,7 @@ if __name__ == "__main__":
     audio = AudioProcess()
     source.set_callback(audio.process)  # Called every SETTING.REC_DURATION
     drone_detector = DroneDetection(
-        model_type="yolo", model_path="assets/computer_vision_models/yolov8n.pt"
+        model_type="yolo", model_path="assets/computer_vision_models/best.pt"
     )
 
     PTZController(
@@ -100,8 +101,12 @@ if __name__ == "__main__":
         rtsp_port=SETTINGS.PTZ_RTSP_PORT,
         video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
     )
-
-    stream = PTZController("main_camera").get_video_stream()
+    PTZController(
+        "opencv_vendor",
+        OpenCVStreamingVendor,
+        video_channel=0,
+    )
+    stream = PTZController("opencv_vendor").get_video_stream()
 
     nb_channels = len(devices) * 2
     frame_duration_s = SETTINGS.AUDIO_CHUNK_DURATION / 1000
