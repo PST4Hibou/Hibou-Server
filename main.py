@@ -35,10 +35,10 @@ class AudioProcess:
         self.audio_queue.append(audio_samples)
 
         res = self.model.infer(audio_samples)
-        if np.any(res):
-            print(f"DRONE: {res}")
-        else:
-            print(f"NONE: {res}")
+        # if np.any(res):
+        #     print(f"DRONE: {res}")
+        # else:
+        #     print(f"NONE: {res}")
 
         if SETTINGS.AUDIO_PLAYBACK:  # Only for debug purposes
             play_sample(audio_samples, 0)
@@ -105,24 +105,24 @@ if __name__ == "__main__":
     # PTZController(
     #     "opencv_vendor",
     #     OpenCVStreamingVendor,
-    #     video_channel="assets/videos/DJI drones noise comparson.mp4",
+    #     video_channel=0,
     # )
     stream = PTZController("main_camera").get_video_stream()
 
     tracker = PIDTracker(
         yaw_pid_coefs=PIDTracker.PidCoefs(
-            kp=0.5,
-            ki=0.1,
-            kd=0.05,
+            kp=4,
+            ki=0.0,
+            kd=0.3,
             setpoint=0.0,
-            output_limits=(-30, 30),
+            output_limits=(-5, 5),
         ),
         pitch_pid_coefs=PIDTracker.PidCoefs(
             kp=0.5,
             ki=0.1,
             kd=0.05,
             setpoint=0.0,
-            output_limits=(-30, 30),
+            output_limits=(-2, 2),
         ),
     )
 
@@ -151,6 +151,7 @@ if __name__ == "__main__":
         source.start()
         drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
         print("Listening started. Press Ctrl+C to stop.")
+        PTZController("main_camera").go_to_angle(phi=30)
 
         # Main loop
         while True:
@@ -162,8 +163,6 @@ if __name__ == "__main__":
                 energies = [compute_energy(ch) for ch in channels]
 
                 phi_angle = angle_estimator.estimate(energies)
-
-                PTZController("main_camera").go_to_angle(phi=phi_angle)
 
                 # Only for debug purposes
                 if SETTINGS.AUDIO_ENERGY_SPECTRUM and energy_spectrum_plot is not None:
@@ -184,13 +183,15 @@ if __name__ == "__main__":
             if energy_spectrum_plot:
                 energy_spectrum_plot.update()
 
-            # Even when there is no result, we update the tracking
-            controls = tracker.update(
-                drone_detector.get_last_results(),
-            )
-            if controls is not None:
-                # Do whatever
-                print(controls)
+            results = drone_detector.get_last_results()
+            if results is not None:
+                controls = tracker.update(
+                    results,
+                )
+            #     if controls is not None:
+            #         print(controls[0])
+            #         phi = PTZController("main_camera")._current_phi_angle
+            #         PTZController("main_camera").go_to_angle(phi=phi + controls[0])
 
     except KeyboardInterrupt:
         print("\nStopping audio...")
