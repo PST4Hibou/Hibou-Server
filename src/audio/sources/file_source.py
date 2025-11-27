@@ -69,40 +69,30 @@ class FileAudioSource(GstreamerSource):
         rec_hz = SETTINGS.AUDIO_REC_HZ
 
         channel = 0
-        for ch, files in enumerate(self._audio_paths):
-            for idx, fp in enumerate(files):
-                gst_pipeline_str = (
-                    f'filesrc location="{fp}" ! '
-                    f"decodebin ! "
-                    f"audioconvert ! "
-                    f"audio/x-raw, format=F32LE ! "
-                    f"audioresample ! "
-                    f"audio/x-raw, format=F32LE, rate=(int){rec_hz} ! "
-                    f"identity sync=true ! "  # <--- throttle to realtime
-                    f"appsink name=appsink_{ch} "
-                    f"drop=false max-buffers=1"
+        for ch, directory in enumerate(self._audio_paths):
+            gst_pipeline_str = (
+                f"multifilesrc location=\"{directory}/%d.wav\" ! "
+                f"decodebin ! "
+                f"audioconvert ! "
+                f"audio/x-raw, format=F32LE ! "
+                f"audioresample ! "
+                f"audio/x-raw, format=F32LE, rate=(int){rec_hz} ! "
+                f"identity sync=true ! "  # <--- throttle to realtime
+                f"tee name=t "
+                f"t. ! appsink name=appsink_{ch} drop=false max-buffers=1 "
+            )
+
+            if self._enable_recording_saves:
+                os.makedirs(f"{save_fp}/{channel}", exist_ok=True)
+                os.makedirs(f"{save_fp}/{channel + 1}", exist_ok=True)
+
+                gst_pipeline_str += (
+                    f"splitmuxsink location=\"{save_fp}/{channel}/%d.wav\" "
+                    f"muxer=wavenc max-size-time={record_duration}"
                 )
 
-                if self._enable_recording_saves:
-                    os.makedirs(f"{save_fp}/{channel}", exist_ok=True)
-                    os.makedirs(f"{save_fp}/{channel + 1}", exist_ok=True)
-
-                    gst_pipeline_str = (
-                        f'filesrc location="{fp}" ! '
-                        f"decodebin ! "
-                        f"audioconvert ! "
-                        f"audio/x-raw, format=F32LE ! "
-                        f"audioresample ! "
-                        f"audio/x-raw, format=F32LE, rate=(int){rec_hz} ! "
-                        f"tee name=t "
-                        f"t. ! queue ! identity sync=true ! appsink name=appsink_{ch} "
-                        f"t. ! queue ! audioconvert ! audioresample ! "
-                        f'splitmuxsink location="{save_fp}/{channel}/%d.wav" '
-                        f"muxer=wavenc max-size-time={record_duration}"
-                    )
-
-                pipeline_strings.append(gst_pipeline_str)
-                channel += 1
+            pipeline_strings.append(gst_pipeline_str)
+            channel += 1
 
         # Our audios are PCM 24, meaning each audio sample is 3 bytes.
         super().__init__(pipeline_strings, int((rec_hz * record_duration / 1e9) * 3))
@@ -117,11 +107,4 @@ class FileAudioSource(GstreamerSource):
             if not os.path.isdir(channel_folder):
                 raise FileNotFoundError(f"Channel folder missing: {channel_folder}")
 
-            # Collect all wav files in this channel folder
-            files = sorted(glob.glob(os.path.join(channel_folder, "*.wav")))
-            if not files:
-                raise FileNotFoundError(
-                    f"No .wav files found in channel {ch} folder: {channel_folder}"
-                )
-
-            self._audio_paths.append(files)
+            self._audio_paths.append(channel_folder)
