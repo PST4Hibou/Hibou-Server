@@ -87,11 +87,13 @@ class FileAudioSource(GstreamerSource):
         channel = 0
         for ch, directory in enumerate(self._audio_paths):
             gst_pipeline_str = (
-                f'filesrc location="{directory}/63_Chs9J6t7.wav" ! '
-                f"queue ! decodebin ! queue ! "
+                f'multifilesrc location="{directory}/%d.wav" start-index={self._range[0]} stop-index={self._range[1]} ! '
+                f"wavparse ignore-length=true ! "
+                f"queue ! "
                 f"audioconvert ! "
                 f"audio/x-raw, format=F32LE, rate=(int){rec_hz} ! "
-                f"identity sync=true ! "  # <--- throttle to realtime
+                f"input-selector ! "
+                f"identity sync=true ! "  # Throttle to real time
                 f"tee name=t "
                 f"t. ! appsink name=appsink_{ch} drop=false max-buffers=1 "
             )
@@ -108,7 +110,7 @@ class FileAudioSource(GstreamerSource):
             pipeline_strings.append(gst_pipeline_str)
             channel += 1
 
-        # Our audios are PCM 24, meaning each audio sample is 3 bytes.
+        # Our audios are F32LE, so each "element" is of size 4.
         super().__init__(pipeline_strings, int((rec_hz * record_duration / 1e9) * 4))
 
     def _setup(self):
