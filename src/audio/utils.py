@@ -12,7 +12,10 @@ def bytes_to_audio(raw_bytes):
     Returns:
         np.ndarray: 1D array of float32 samples in range [-1.0, 1.0].
     """
-    return np.frombuffer(raw_bytes, dtype=np.float32)
+    # EOSs coming from the GST pipelines generates NaNs, that can be played as audio spikes,
+    # and can also cause problems in the downstream code (e.g.: librosa can complain).
+    # Thus, we need to remove them.
+    return np.nan_to_num(np.frombuffer(raw_bytes, dtype=np.float32))
 
 
 class MultiChannelQueue:
