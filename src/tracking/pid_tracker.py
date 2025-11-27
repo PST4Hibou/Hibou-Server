@@ -57,11 +57,17 @@ class PIDTracker(BaseTracker):
             box_center_x = (x1 + x2) / 2
             box_center_y = (y1 + y2) / 2
 
-            dx = abs(frame_center_x - box_center_x)
-            dy = abs(frame_center_y - box_center_y)
+            dx = frame_center_x - box_center_x
+            dy = frame_center_y - box_center_y
 
-            min_dx = min(min_dx, dx)
-            min_dy = min(min_dy, dy)
+            dx = (frame_center_x - box_center_x) / frame_center_x  # range [-1, 1]
+            dy = (frame_center_y - box_center_y) / frame_center_y
+
+            # You want the box closest to center => compare using abs()
+            if abs(dx) < abs(min_dx):
+                min_dx = dx
+            if abs(dy) < abs(min_dy):
+                min_dy = dy
 
         return min_dx, min_dy
 
@@ -82,6 +88,6 @@ class PIDTracker(BaseTracker):
             min_dy = min(min_dy, dy)
 
         yaw_angle = self.yaw_pid(min_dx)
-        pitch_angle = self.yaw_pid(min_dy)
+        pitch_angle = self.pitch_pid(min_dy)
 
         return yaw_angle, pitch_angle

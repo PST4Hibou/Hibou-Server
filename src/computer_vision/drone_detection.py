@@ -48,7 +48,15 @@ class DroneDetection:
                 frame = draw_detections(frame, results)
 
             if display:
-                cv2.imshow("Drone Detection", frame)
+                display_frame = cv2.resize(
+                    frame,
+                    dsize=(
+                        frame.shape[1] // 2,
+                        frame.shape[0] // 2,
+                    ),
+                    interpolation=cv2.INTER_AREA,
+                )
+                cv2.imshow("Drone Detection", display_frame)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     self.stop()
                     break
