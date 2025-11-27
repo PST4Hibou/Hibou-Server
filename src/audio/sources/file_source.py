@@ -3,6 +3,21 @@ from src.settings import SETTINGS
 import soundfile as sf
 import glob
 import os
+import math
+
+
+def get_wav_dir_bounds(directory: str):
+    # Get all numeric .wav filenames
+    numeric_wav_files = []
+    for f in os.listdir(directory):
+        name, ext = os.path.splitext(f)
+        if ext.lower() == '.wav' and name.isdigit():
+            numeric_wav_files.append(int(name))
+
+    if numeric_wav_files:
+        return (min(numeric_wav_files), max(numeric_wav_files))
+    else:
+        return (-math.inf, math.inf)
 
 
 class FileAudioSource(GstreamerSource):
@@ -62,8 +77,9 @@ class FileAudioSource(GstreamerSource):
         self._continue = False
         self._audio_paths = []
         self._enable_recording_saves = enable_recording_saves
+        self._range = (0, -1)
 
-        self._get_file_paths()
+        self._setup()
 
         pipeline_strings = []
         rec_hz = SETTINGS.AUDIO_REC_HZ
@@ -71,7 +87,7 @@ class FileAudioSource(GstreamerSource):
         channel = 0
         for ch, directory in enumerate(self._audio_paths):
             gst_pipeline_str = (
-                f"multifilesrc location=\"{directory}/%d.wav\" ! "
+                f"multifilesrc location=\"{directory}/%d.wav\" start-index={self._range[0]} stop-index={self._range[1]} ! "
                 f"decodebin ! "
                 f"audioconvert ! "
                 f"audio/x-raw, format=F32LE ! "
@@ -97,8 +113,14 @@ class FileAudioSource(GstreamerSource):
         # Our audios are PCM 24, meaning each audio sample is 3 bytes.
         super().__init__(pipeline_strings, int((rec_hz * record_duration / 1e9) * 3))
 
-    def _get_file_paths(self):
-        """Collect file paths for all channels (auto-detect files inside each channel folder)."""
+    def _setup(self):
+        """
+            Collect file paths for all channels (auto-detect files inside each channel folder).
+            Also determines the bounds of the audio files.
+        """
+        upper_bounds = []
+        lower_bounds = []
+
         self._audio_paths = []
         for ch in range(self._channels_count):
             channel_folder = os.path.join(
@@ -108,3 +130,14 @@ class FileAudioSource(GstreamerSource):
                 raise FileNotFoundError(f"Channel folder missing: {channel_folder}")
 
             self._audio_paths.append(channel_folder)
+            bounds = get_wav_dir_bounds(channel_folder)
+            lower_bounds.append(bounds[0])
+            upper_bounds.append(bounds[1])
+
+        lower = min(upper_bounds)
+        upper = max(lower_bounds)
+
+        upper = -1 if upper == math.inf else upper
+        lower = 0 if lower == -math.inf else lower
+
+        self._range = (upper, lower)
