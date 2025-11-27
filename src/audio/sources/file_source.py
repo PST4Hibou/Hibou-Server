@@ -11,7 +11,7 @@ def get_wav_dir_bounds(directory: str):
     numeric_wav_files = []
     for f in os.listdir(directory):
         name, ext = os.path.splitext(f)
-        if ext.lower() == '.wav' and name.isdigit():
+        if ext.lower() == ".wav" and name.isdigit():
             numeric_wav_files.append(int(name))
 
     if numeric_wav_files:
@@ -87,11 +87,9 @@ class FileAudioSource(GstreamerSource):
         channel = 0
         for ch, directory in enumerate(self._audio_paths):
             gst_pipeline_str = (
-                f"multifilesrc location=\"{directory}/%d.wav\" start-index={self._range[0]} stop-index={self._range[1]} ! "
-                f"decodebin ! "
+                f'filesrc location="{directory}/63_Chs9J6t7.wav" ! '
+                f"queue ! decodebin ! queue ! "
                 f"audioconvert ! "
-                f"audio/x-raw, format=F32LE ! "
-                f"audioresample ! "
                 f"audio/x-raw, format=F32LE, rate=(int){rec_hz} ! "
                 f"identity sync=true ! "  # <--- throttle to realtime
                 f"tee name=t "
@@ -103,7 +101,7 @@ class FileAudioSource(GstreamerSource):
                 os.makedirs(f"{save_fp}/{channel + 1}", exist_ok=True)
 
                 gst_pipeline_str += (
-                    f"splitmuxsink location=\"{save_fp}/{channel}/%d.wav\" "
+                    f'splitmuxsink location="{save_fp}/{channel}/%d.wav" '
                     f"muxer=wavenc max-size-time={record_duration}"
                 )
 
@@ -111,12 +109,12 @@ class FileAudioSource(GstreamerSource):
             channel += 1
 
         # Our audios are PCM 24, meaning each audio sample is 3 bytes.
-        super().__init__(pipeline_strings, int((rec_hz * record_duration / 1e9) * 3))
+        super().__init__(pipeline_strings, int((rec_hz * record_duration / 1e9) * 4))
 
     def _setup(self):
         """
-            Collect file paths for all channels (auto-detect files inside each channel folder).
-            Also determines the bounds of the audio files.
+        Collect file paths for all channels (auto-detect files inside each channel folder).
+        Also determines the bounds of the audio files.
         """
         upper_bounds = []
         lower_bounds = []
