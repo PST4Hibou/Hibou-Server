@@ -106,5 +106,5 @@ class RTPAudioSource(GstreamerSource):
             pipeline_strings.append(gst_pipeline_str)
             channel += 2
 
-        # Our audios are signed float 32, from -1 to 1, meaning each audio sample is 4 bytes.
+        # Our audios are F32LE, so each "element" is of size 4.
         super().__init__(pipeline_strings, int((rec_hz * record_duration / 1e9) * 4))
