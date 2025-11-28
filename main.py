@@ -29,16 +29,18 @@ class AudioProcess:
     def __init__(self):
         self.audio_queue = deque(maxlen=1)
         self.model = ModelProxy(args.audio_model)
+        self.sample_count = 0
 
     def process(self, audio_samples: list[Channel]):
-        # enhanced_audio = apply_noise_reduction(audio_samples)
         self.audio_queue.append(audio_samples)
 
+      
+
         res = self.model.infer(audio_samples)
-        # if np.any(res):
-        #     print(f"DRONE: {res}")
-        # else:
-        #     print(f"NONE: {res}")
+        if np.any(res):
+            print(f"DRONE: {res}")
+        else:
+            print(f"NONE: {res}")
 
         if SETTINGS.AUDIO_PLAYBACK:  # Only for debug purposes
             play_sample(audio_samples, 0)
@@ -54,6 +56,19 @@ class AudioProcess:
 
 
 if __name__ == "__main__":
+    import librosa
+
+    model = ModelProxy(args.audio_model)
+    files = [f for f in os.listdir("assets/test2/0")]
+    for file in files:
+        file_path = os.path.join("assets/test2/0", file)
+        waveform, sr = librosa.load(file_path, sr=16000, mono=True)
+        print(waveform[0:50])
+        break
+        res = model.infer([waveform])
+        print(file, res[0])
+
+    # exit(0)
     logger.debug(f"Loaded settings: {SETTINGS}")
     devices = ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
     # devices = ADCDeviceManager.auto_discover()
@@ -91,23 +106,23 @@ if __name__ == "__main__":
         model_type="yolo", model_path="assets/computer_vision_models/best.pt"
     )
 
-    PTZController(
-        "main_camera",
-        DS2DY9250IAXA,
-        host=SETTINGS.PTZ_HOST,
-        username=SETTINGS.PTZ_USERNAME,
-        password=SETTINGS.PTZ_PASSWORD,
-        start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
-        end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
-        rtsp_port=SETTINGS.PTZ_RTSP_PORT,
-        video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
-    )
+    # PTZController(
+    #     "main_camera",
+    #     DS2DY9250IAXA,
+    #     host=SETTINGS.PTZ_HOST,
+    #     username=SETTINGS.PTZ_USERNAME,
+    #     password=SETTINGS.PTZ_PASSWORD,
+    #     start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
+    #     end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
+    #     rtsp_port=SETTINGS.PTZ_RTSP_PORT,
+    #     video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
+    # )
     # PTZController(
     #     "opencv_vendor",
     #     OpenCVStreamingVendor,
     #     video_channel=0,
     # )
-    stream = PTZController("main_camera").get_video_stream()
+    # stream = PTZController("main_camera").get_video_stream()
 
     tracker = PIDTracker(
         yaw_pid_coefs=PIDTracker.PidCoefs(
@@ -149,9 +164,9 @@ if __name__ == "__main__":
 
     try:
         source.start()
-        drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
+        # drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
         print("Listening started. Press Ctrl+C to stop.")
-        PTZController("main_camera").go_to_angle(phi=30)
+        # PTZController("main_camera").go_to_angle(phi=30)
 
         # Main loop
         while True:
