@@ -60,7 +60,14 @@ class ModelProxy:
 
         # Detect if DataParallel was used
         self.is_src_parallel = any(k.startswith("module.") for k in state.keys())
-        self._model.load_state_dict(state)
+
+        if self.is_src_parallel:
+            parallel = nn.DataParallel(self._model)
+            parallel.load_state_dict(state)
+            self._model = parallel.module
+        else:
+            self._model.load_state_dict(state)
+
 
         if has_cuda:
             if torch.cuda.device_count() > 1:
