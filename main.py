@@ -7,6 +7,7 @@ from src.computer_vision.drone_detection import DroneDetection
 from src.audio.sources.file_source import FileAudioSource
 from src.ptz_devices.ptz_controller import PTZController
 from src.audio.sources.rtp_source import RTPAudioSource
+from src.audio.sources.alsa_source import AlsaAudioSource
 from src.tracking.pid_tracker import PIDTracker
 from src.audio.debug.radar import RadarPlot
 from src.audio.energy import compute_energy
@@ -35,10 +36,10 @@ class AudioProcess:
         self.audio_queue.append(audio_samples)
 
         res = self.model.infer(audio_samples)
-        # if np.any(res):
-        #     print(f"DRONE: {res}")
-        # else:
-        #     print(f"NONE: {res}")
+        if np.any(res):
+            print(f"DRONE: {res}")
+        else:
+            print(f"NONE: {res}")
 
         if SETTINGS.AUDIO_PLAYBACK:  # Only for debug purposes
             play_sample(audio_samples, 0)
@@ -54,6 +55,17 @@ class AudioProcess:
 
 
 if __name__ == "__main__":
+    import librosa
+
+    model = ModelProxy(args.audio_model)
+    files = [f for f in os.listdir("assets/test2/0")]
+    for file in files:
+        file_path = os.path.join("assets/test2/0", file)
+        waveform, sr = librosa.load(file_path, sr=16000)
+        res = model.infer([waveform])
+        print(file, res[0])
+
+    exit(0)
     logger.debug(f"Loaded settings: {SETTINGS}")
     devices = ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
     # devices = ADCDeviceManager.auto_discover()
@@ -84,6 +96,13 @@ if __name__ == "__main__":
             stream_latency=int(SETTINGS.AUDIO_STREAM_LATENCY),
             channel_prefix=args.channel_prefix,
         )
+        # source = AlsaAudioSource(
+        #     save_fp=recs_folder_name,
+        #     enable_recording_saves=SETTINGS.REC_ENABLE,
+        #     record_duration=SETTINGS.AUDIO_CHUNK_DURATION,
+        #     stream_latency=int(SETTINGS.AUDIO_STREAM_LATENCY),
+        #     rec_hz=int(SETTINGS.AUDIO_REC_HZ),
+        # )
 
     audio = AudioProcess()
     source.set_callback(audio.process)  # Called every SETTING.REC_DURATION
@@ -91,23 +110,23 @@ if __name__ == "__main__":
         model_type="yolo", model_path="assets/computer_vision_models/best.pt"
     )
 
-    PTZController(
-        "main_camera",
-        DS2DY9250IAXA,
-        host=SETTINGS.PTZ_HOST,
-        username=SETTINGS.PTZ_USERNAME,
-        password=SETTINGS.PTZ_PASSWORD,
-        start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
-        end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
-        rtsp_port=SETTINGS.PTZ_RTSP_PORT,
-        video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
-    )
     # PTZController(
-    #     "opencv_vendor",
-    #     OpenCVStreamingVendor,
-    #     video_channel=0,
+    #     "main_camera",
+    #     DS2DY9250IAXA,
+    #     host=SETTINGS.PTZ_HOST,
+    #     username=SETTINGS.PTZ_USERNAME,
+    #     password=SETTINGS.PTZ_PASSWORD,
+    #     start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
+    #     end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
+    #     rtsp_port=SETTINGS.PTZ_RTSP_PORT,
+    #     video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
     # )
-    stream = PTZController("main_camera").get_video_stream()
+    PTZController(
+        "opencv_vendor",
+        OpenCVStreamingVendor,
+        video_channel=0,
+    )
+    stream = PTZController("opencv_vendor").get_video_stream()
 
     tracker = PIDTracker(
         yaw_pid_coefs=PIDTracker.PidCoefs(
@@ -151,7 +170,7 @@ if __name__ == "__main__":
         source.start()
         drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
         print("Listening started. Press Ctrl+C to stop.")
-        PTZController("main_camera").go_to_angle(phi=30)
+        # PTZController("opencv_vendor").go_to_angle(phi=30)
 
         # Main loop
         while True:
