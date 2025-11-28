@@ -3,7 +3,12 @@ from src.audio.gstreamer_engine import GStreamerEngine
 from src.audio.audio import Source
 from typing import override
 import time
+import numpy as np
 
+
+def normalize(arr: np.array):
+    return arr
+    #return arr / np.max(np.abs(arr))
 
 class GstreamerSource(Source):
     def __init__(self, pipelines_strs, buffer_size=0):
@@ -55,4 +60,4 @@ class GstreamerSource(Source):
             self._sinks_data[channel_id] = self._sinks_data[channel_id][
                 self.required_buffer_size :
             ]
-            self._push_data(channel_id, bytes_to_audio(buff))
+            self._push_data(channel_id, normalize(bytes_to_audio(buff)))
