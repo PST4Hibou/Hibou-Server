@@ -91,7 +91,7 @@ class FileAudioSource(GstreamerSource):
                 f"wavparse ignore-length=true ! "
                 f"queue ! "
                 f"audioconvert ! "
-                f"audio/x-raw, format=F32LE, rate=(int){rec_hz} ! "
+                f"audio/x-raw, format=(string)F32LE, rate=(int){rec_hz}, channels=(int)1 ! " # All files should contain only one channel.
                 f"input-selector ! "
                 f"identity sync=true ! "  # Throttle to real time
                 f"tee name=t "
