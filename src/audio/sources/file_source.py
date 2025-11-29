@@ -4,6 +4,7 @@ import soundfile as sf
 import glob
 import os
 import math
+from pathlib import Path
 
 
 def get_wav_dir_bounds(directory: str):
@@ -86,16 +87,28 @@ class FileAudioSource(GstreamerSource):
 
         channel = 0
         for ch, directory in enumerate(self._audio_paths):
-            gst_pipeline_str = (
-                f'multifilesrc location="{directory}/%d.wav" start-index={self._range[0]} stop-index={self._range[1]} ! '
-                f"wavparse ignore-length=true ! "
-                f"queue ! "
+            """
+            It is required to have many filesrc elements, because a multifilesrc is not designed to have multiple EOS
+            within, it only glues raw files together, before feeding the next element. There is almost no doc about
+            streamsynchronizer too, or how gst-play with --gapless works. Due to this, our only option to have a gapless
+            stream, is to have as many sources as files we have, and then concatenate them. concat will handle gap and
+            time (pts, dts) fixing itself, and then forward the correctly ordered buffers to the next element.
+            """
+
+            gst_pipeline_str = " ".join(
+                [
+                    f'filesrc location="{directory}/{i}.wav" ! wavparse ! c. '
+                    for i in range(self._range[0], self._range[1] + 1)
+                ]
+            )
+
+            gst_pipeline_str += (
+                f"concat name=c ! "
                 f"audioconvert ! "
-                f"audio/x-raw, format=(string)F32LE, rate=(int){rec_hz}, channels=(int)1 ! " # All files should contain only one channel.
-                f"input-selector ! "
+                f"audio/x-raw, format=(string)F32LE, rate=(int){rec_hz}, channels=(int)1 ! "  # All files should contain only one channel.
                 f"identity sync=true ! "  # Throttle to real time
                 f"tee name=t "
-                f"t. ! appsink name=appsink_{ch} drop=false max-buffers=1 "
+                f"t. ! appsink name=appsink_{ch} "
             )
 
             if self._enable_recording_saves:
