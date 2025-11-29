@@ -1,6 +1,8 @@
 from torch import nn, optim, Tensor
+import torch
 
-class DummyModel(nn.Module):
+
+class Dummy(nn.Module):
     def __init__(self, n_classes, match_input_shape=False):
         super().__init__()
         self.name = "Dummy"
@@ -12,8 +14,23 @@ class DummyModel(nn.Module):
 
     def forward(self, x):
         if self.match_input_shape:
-            return self.dummy * torch.ones(x.shape[0], self.num_classes, device=x.device)
+            return self.dummy * torch.ones(
+                x.shape[0], self.num_classes, device=x.device
+            )
         return torch.tensor(1.0, device=x.device).expand(())
 
 
-ModelBuilder = lambda: DummyModel(2)
+class DummyModel:
+    def __init__(self, n_classes=10):
+        self.model = Dummy(n_classes, match_input_shape=True)
+
+    def infer(self, audios: list) -> torch.Tensor:
+        batch_size = len(audios)
+        dummy_input = torch.zeros(batch_size, 1, 16000)  # Example input shape
+        with torch.no_grad():
+            outputs = self.model(dummy_input)
+        predictions = torch.argmax(outputs, dim=1)
+        return predictions
+
+
+Model = lambda: DummyModel()
