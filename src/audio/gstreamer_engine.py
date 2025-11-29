@@ -85,13 +85,20 @@ class GStreamerEngine:
         sample = sink.emit("pull-sample")
         if not sample:
             return Gst.FlowReturn.ERROR
+
         buf = sample.get_buffer()
         if not buf:
             return Gst.FlowReturn.ERROR
 
+        reset = buf.has_flags(Gst.BufferFlags.DISCONT)
+
+        if buf.has_flags(Gst.BufferFlags.CORRUPTED):
+            # [TODO] Add a message or something to let the user know about the stream corruption.
+            pass
+
         try:
             data = buf.extract_dup(0, buf.get_size())
-            self._on_sample(channel_id, data)  # pass raw data upward
+            self._on_sample(channel_id, data, reset)  # pass raw data upward
         except Exception as e:
             # Log error or handle appropriately
             print(f"Error in on_sample callback for channel {channel_id}: {e}")

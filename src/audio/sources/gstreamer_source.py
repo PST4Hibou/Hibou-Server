@@ -6,16 +6,18 @@ import time
 import numpy as np
 
 
-def normalize(arr: np.array):
-    return arr
-    #return arr / np.max(np.abs(arr))
-
 class GstreamerSource(Source):
     def __init__(self, pipelines_strs, buffer_size=0):
         super().__init__()
         self._engine = GStreamerEngine(pipelines_strs, self._on_new_sample)
         self._data_queue = MultiChannelQueue(self._engine.channels_count())
+        self.alignment = 4  # Because all our data is F32LE.
         self.required_buffer_size = buffer_size
+
+        # DEBUG: Check if buffer size is aligned
+        if buffer_size % self.alignment != 0:
+            # [TODO] Add warning to tell about the misalignment of the buffer.
+            self.required_buffer_size = (buffer_size // self.alignment) * self.alignment
 
         self._sinks_data = [b"" for _ in range(self.channels_count())]
 
@@ -50,7 +52,10 @@ class GstreamerSource(Source):
     def set_buffer_size(self, buffer_size):
         self.required_buffer_size = buffer_size
 
-    def _on_new_sample(self, channel_id: int, data):
+    def _on_new_sample(self, channel_id: int, data, reset: bool):
+        if reset:  # It may be requested by a discontinuity, or something else.
+            self._sinks_data[channel_id] = b""
+
         # store data per channel
         self._sinks_data[channel_id] += data
 
@@ -60,4 +65,7 @@ class GstreamerSource(Source):
             self._sinks_data[channel_id] = self._sinks_data[channel_id][
                 self.required_buffer_size :
             ]
-            self._push_data(channel_id, normalize(bytes_to_audio(buff)))
+
+            # Convert bytes to audio array
+            # No need to normalize as the norm is to have the floats normalized.
+            self._push_data(channel_id, bytes_to_audio(buff))
