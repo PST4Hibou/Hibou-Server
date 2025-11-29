@@ -29,12 +29,9 @@ class AudioProcess:
     def __init__(self):
         self.audio_queue = deque(maxlen=1)
         self.model = ModelProxy(args.audio_model)
-        self.sample_count = 0
 
     def process(self, audio_samples: list[Channel]):
         self.audio_queue.append(audio_samples)
-
-      
 
         res = self.model.infer(audio_samples)
         if np.any(res):
@@ -56,19 +53,6 @@ class AudioProcess:
 
 
 if __name__ == "__main__":
-    import librosa
-
-    model = ModelProxy(args.audio_model)
-    files = [f for f in os.listdir("assets/test2/0")]
-    for file in files:
-        file_path = os.path.join("assets/test2/0", file)
-        waveform, sr = librosa.load(file_path, sr=16000, mono=True)
-        print(waveform[0:50])
-        break
-        res = model.infer([waveform])
-        print(file, res[0])
-
-    # exit(0)
     logger.debug(f"Loaded settings: {SETTINGS}")
     devices = ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
     # devices = ADCDeviceManager.auto_discover()
