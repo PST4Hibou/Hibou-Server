@@ -20,6 +20,21 @@ def on_format_location(_, fragment_id: int):
 
 
 class RtspSource(VideoSource, VideoRecorder):
+    """RTSP source + recorder using GStreamer.
+
+    This class builds a GStreamer pipeline that reads an RTSP H264 stream, decodes
+    frames for use in the application (via an appsink) and optionally records the
+    incoming H264 stream to disk (via a splitmuxsink). It implements the
+    VideoSource interface (frame retrieval) and VideoRecorder (start/stop
+    recording).
+
+    Notes:
+        - Frame format exposed by `get_frame()` is a BGR numpy array compatible
+          with OpenCV.
+        - Recording is reference-counted: multiple callers can call
+          `start_recording()` and must balance with `stop_recording()`.
+    """
+
     def __init__(self, rtsp_url: str):
         super().__init__()
 
@@ -57,11 +72,27 @@ class RtspSource(VideoSource, VideoRecorder):
             raise
 
     def _create_pipeline(self, pipeline_str: str) -> None:
+        """Create the GStreamer pipeline from a pipeline description string.
+
+        Args:
+            pipeline_str: The textual GStreamer pipeline description to parse.
+
+        Raises:
+            RuntimeError: If GStreamer fails to parse or create the pipeline.
+        """
         self._pipeline = Gst.parse_launch(pipeline_str)
         if not self._pipeline:
             raise RuntimeError("Failed to parse pipeline")
 
     def _connect_sinks(self) -> None:
+        """Look up and configure the appsink/recorder elements from the pipeline.
+
+        This method locates the named elements of the pipeline, and sets up callbacks
+        and properties as needed.
+
+        Raises:
+            RuntimeError: If any required pipeline element cannot be found.
+        """
         self._app_sink = self._pipeline.get_by_name("app_sink")
         self._rec_sink = self._pipeline.get_by_name("rec_sink")
         self._rec_valve = self._pipeline.get_by_name("rec_valve")
@@ -76,6 +107,19 @@ class RtspSource(VideoSource, VideoRecorder):
         self._app_sink.connect("new-sample", self._handle_new_sample)
 
     def _handle_new_sample(self, sink: GstApp.AppSink) -> Gst.FlowReturn:
+        """GStreamer appsink callback to handle a new decoded sample.
+
+        The BGR sample is stored in ``self._last_frame`` for retrieval by the
+        consumer via ``get_frame()``.
+
+        Args:
+            sink: The GstApp.AppSink that emitted the "new-sample" signal.
+
+        Returns:
+            A Gst.FlowReturn value. Returns Gst.FlowReturn.OK on success so the
+            pipeline continues, and Gst.FlowReturn.ERROR on unrecoverable
+            failures.
+        """
         sample = sink.emit("pull-sample")
         if not sample:
             return Gst.FlowReturn.ERROR
@@ -109,6 +153,14 @@ class RtspSource(VideoSource, VideoRecorder):
 
     @override
     def start(self) -> None:
+        """Start playing the RTSP pipeline.
+
+        Transitions the internal GStreamer pipeline into PLAYING state so that
+        frames start being decoded and delivered.
+
+        Raises:
+            RuntimeError: If GStreamer fails to change to the PLAYING state.
+        """
         if self._pipeline.set_state(Gst.State.PLAYING) == Gst.StateChangeReturn.FAILURE:
             raise RuntimeError("Failed to start pipeline")
 
@@ -116,6 +168,14 @@ class RtspSource(VideoSource, VideoRecorder):
 
     @override
     def stop(self) -> None:
+        """Stop the RTSP pipeline and release resources.
+
+        Transitions the pipeline to NULL state. Consumers should call this
+        when the source is no longer needed to easy the CPU & memory usage of GST.
+
+        Raises:
+            RuntimeError: If GStreamer fails to change to the NULL state.
+        """
         if self._pipeline.set_state(Gst.State.NULL) == Gst.StateChangeReturn.FAILURE:
             raise RuntimeError("Failed to stop pipeline")
 
@@ -123,6 +183,12 @@ class RtspSource(VideoSource, VideoRecorder):
 
     @override
     def start_recording(self):
+        """Begin recording the incoming stream to disk.
+
+        This method is reference-counted: the first caller will create a new
+        recording fragment and open the recorder. Callers must match with
+        ``stop_recording()`` to actually stop the recording.
+        """
         if self._record_requests == 0:
             self._rec_sink.emit("split-now")
             self._rec_valve.set_property("drop", False)
@@ -131,6 +197,13 @@ class RtspSource(VideoSource, VideoRecorder):
 
     @override
     def stop_recording(self) -> None:
+        """Stop a previously requested recording.
+
+        Decrements the internal record-request counter. When the counter reaches
+        zero the recorder valve is closed so that recording stops. The method
+        does nothing if recording was not active, but callers should ensure
+        balanced start/stop calls.
+        """
         self._record_requests -= 1
 
         if self._record_requests == 0:
@@ -138,6 +211,15 @@ class RtspSource(VideoSource, VideoRecorder):
 
     @override
     def get_fps(self) -> float:
+        """Return the frames-per-second of the incoming stream.
+
+        The FPS is read from the appsink caps the first time this method is
+        called and cached for subsequent calls. If FPS cannot be determined
+        the method returns 0.0.
+
+        Returns:
+            float: The stream's FPS, or 0.0 if unknown.
+        """
         if self._fps != 0.0:
             return self._fps
 
@@ -151,9 +233,25 @@ class RtspSource(VideoSource, VideoRecorder):
 
     @override
     def get_frame(self) -> tuple[bool, any]:
+        """Retrieve the most recent frame delivered by the appsink.
+
+        This method returns a tuple (ok, frame) where `ok` indicates whether a
+        valid frame was returned and `frame` is the OpenCV-compatible BGR
+        numpy array. The last-frame buffer is cleared after reading so repeated
+        calls without a new frame will return (False, None).
+
+        Returns:
+            tuple[bool, any]: (True, frame) when a frame is available, else
+            (False, None).
+        """
         v, self._last_frame = self._last_frame, None
         return (self._plays and v is not None), v
 
     @override
     def is_opened(self) -> bool:
+        """Check if the RTSP stream is currently active.
+
+        Returns:
+            bool: True if the stream is playing, False otherwise
+        """
         return self._plays

@@ -67,6 +67,7 @@ class DroneDetection:
         cv2.destroyAllWindows()
 
     def _sleep(self):
+        """Method used to let other code parts run. Should be called from _run_detection loop."""
         if self._fps == 0.0:
             self._fps = self._stream.get_fps()
             if self._fps != 0.0:
@@ -75,12 +76,14 @@ class DroneDetection:
         time.sleep(self._fps / 10.0)
 
     def get_last_results(self) -> list[Results] | None:
+        """Retrieves the first available result."""
         try:
             return self.results_queue.pop()
         except IndexError:
             return None
 
     def is_empty(self) -> bool:
+        """Tells if the results list is empty."""
         return len(self.results_queue) == 0
 
     def start(self, stream: VideoSource, display: bool = True):
