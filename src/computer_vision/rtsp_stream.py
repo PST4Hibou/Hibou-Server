@@ -1,7 +1,9 @@
 from src.computer_vision.video_recorder import VideoRecorder
 from src.computer_vision.video_source import VideoSource
-from typing import Callable, override
+from src.settings import SETTINGS
 from src.arguments import args
+from typing import override
+from pathlib import Path
 import numpy as np
 import time
 import gi
@@ -14,7 +16,7 @@ from gi.repository import Gst, GstApp
 
 
 def on_format_location(_, fragment_id: int):
-    return f"{time.strftime("%Y%m%d-%H%M%S")}-{fragment_id:05d}.mp4"
+    return f"{SETTINGS.VIDEO_SAVE_FP}/{time.strftime("%Y%m%d-%H%M%S")}-{fragment_id:05d}.mp4"
 
 
 class RtspSource(VideoSource, VideoRecorder):
@@ -35,6 +37,9 @@ class RtspSource(VideoSource, VideoRecorder):
         Gst.debug_set_default_threshold(args.gst_dbg_level)
         if not Gst.init_check(None):
             raise RuntimeError("Could not initialize GStreamer")
+
+        # Create dir if missing, splitmuxsink will not create it.
+        Path(SETTINGS.VIDEO_SAVE_FP).mkdir(parents=True, exist_ok=True)
 
         try:
             pipeline_str = (
@@ -130,10 +135,6 @@ class RtspSource(VideoSource, VideoRecorder):
 
         if self._record_requests == 0:
             self._rec_valve.set_property("drop", True)
-
-    @override
-    def release(self) -> None:
-        self.stop()
 
     @override
     def get_fps(self) -> float:
