@@ -14,7 +14,24 @@ class VideoSource(abc.ABC):
     @abstractmethod
     def start(self) -> None:
         """Start the video stream."""
+        raise NotImplementedError
 
     @abstractmethod
     def stop(self) -> None:
         """Stop the video stream."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_fps(self) -> float:
+        """Get the **frames per second** (FPS) of the video stream."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_frame(self) -> tuple[bool, any]:
+        """Retrieve the next frame from the video stream."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_opened(self) -> bool:
+        """Check if the video stream is opened."""
+        raise NotImplementedError
