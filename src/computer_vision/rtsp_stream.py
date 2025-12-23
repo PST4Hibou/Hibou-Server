@@ -18,12 +18,11 @@ def on_format_location(_, fragment_id: int):
 
 
 class RtspSource(VideoSource, VideoRecorder):
-    def __init__(self, rtsp_url: str, on_sample: Callable[[np.ndarray], None]):
+    def __init__(self, rtsp_url: str):
         super().__init__()
 
         self._record_requests: int = 0
         self._pipeline: Gst.Pipeline | None = None
-        self._on_sample: Callable[[np.ndarray], None] = on_sample
         self._app_sink: GstApp.AppSink | None = None
         self._rec_sink: Gst.Element | None = None
         self._rec_valve: Gst.Element | None = None
@@ -89,15 +88,13 @@ class RtspSource(VideoSource, VideoRecorder):
         if not success:
             return Gst.FlowReturn.OK
 
-        w, h = caps.get_value("width"), caps.get_value("height")
-        frame = np.frombuffer(map_info.data, dtype=np.uint8, count=h * w * 3).reshape(
-            (h, w, 3)
-        )
-        self._last_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        buf.unmap(map_info)
-
         try:
-            self._on_sample(frame)  # pass raw data upward
+            w, h = caps.get_value("width"), caps.get_value("height")
+            frame = np.frombuffer(
+                map_info.data, dtype=np.uint8, count=h * w * 3
+            ).reshape((h, w, 3))
+            self._last_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            buf.unmap(map_info)
         except Exception as e:
             # Log error or handle appropriately
             print(f"Error in on_sample callback for RTSP source: {e}")
