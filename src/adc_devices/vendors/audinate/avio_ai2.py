@@ -59,7 +59,10 @@ class AVIOAI2Manager(BaseVendor):
         """Convert DanteDevice to your internal Device model."""
         interface = get_interface_from_ipv4(device.ipv4)
         if not interface:
-            raise ValueError(f"No interface found for IP {device.ipv4}")
+            raise ValueError(
+                f"No network interface matches the IP address {device.ipv4}. "
+                "Please verify that the IP address is part of the configured target network."
+            )
         res = get_multicast_stream_info(interface, device.ipv4)
         return ADCDevice(
             name=device.name,
