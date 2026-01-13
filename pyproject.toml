@@ -3,11 +3,11 @@ name = "hibou"
 version = "0.1.0"
 description = "Hibou project"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "black>=25.9.0",
     "dotenv>=0.9.9",
-    "netaudio>=0.0.10",
+    "netaudio",
     "noisereduce>=3.0.3",
     "pygobject>=3.54.2",
     "sounddevice>=0.5.2",
@@ -19,7 +19,7 @@ dependencies = [
     "colorlog>=6.10.1",
     "hikvisionapi>=0.3.2",
     "opencv-python>=4.12.0.88",
-    "ultralytics>=8.3.221",
+    "ultralytics>=8.3.252",
     "pyaudio>=0.2.14",
     "lap==0.5.12",
     "torchaudio>=2.9.1",
@@ -29,3 +29,6 @@ dependencies = [
     "numba>=0.62.1",
     "simple-pid>=2.0.1",
 ]
+
+[tool.uv.sources]
+netaudio = { git = "https://github.com/BugProg/network-audio-controller.git" }
