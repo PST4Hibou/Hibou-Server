@@ -9,6 +9,7 @@ class ADCDevice:
     model: str
     ipv4: str
     port: int
+    nb_channels: int
     multicast_ip: str
     rtp_payload: int
     interface: str

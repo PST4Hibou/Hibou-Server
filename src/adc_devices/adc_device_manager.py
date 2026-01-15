@@ -1,20 +1,19 @@
 import logging
+
+from .vendors.audinate.avio_ai2 import AVIOAI2Manager
+from .vendors.yamaha.tio1608_d import Tio1608Manager
+from src.helpers.json import read_json, write_json
+from .utils.static_checkup import static_checkup
+from .models.adc_device import ADCDevice
+from typing import List, Optional
 from dataclasses import asdict
 from pathlib import Path
-from typing import List, Optional
-
-from src.helpers.json import read_json, write_json
-from .models.adc_device import ADCDevice
-from .utils.static_checkup import static_checkup
-from .vendors.audinate.avio_ai2 import AVIOAI2Manager
 
 
 class ADCDeviceManager:
     """High-level orchestrator for discovering, loading, and managing audio devices."""
 
-    _SUPPORTED_MANAGERS = [
-        AVIOAI2Manager,
-    ]
+    _SUPPORTED_MANAGERS = [AVIOAI2Manager, Tio1608Manager]
 
     @classmethod
     def load_devices_from_files(cls, json_path: Path) -> List[ADCDevice]:

@@ -9,8 +9,8 @@ from ..base_vendor import BaseVendor
 from typing import List
 
 
-class AVIOAI2Manager(BaseVendor):
-    """Manager for Audinate AVIO AI2 devices."""
+class Tio1608Manager(BaseVendor):
+    """Manager for Yamaha Tio1608-D devices."""
 
     @staticmethod
     def _run(async_fn):
@@ -40,14 +40,14 @@ class AVIOAI2Manager(BaseVendor):
     @classmethod
     def scan_devices(cls) -> List[ADCDevice]:
         """Synchronous wrapper for asynchronous Dante discovery."""
-        logging.debug("Starting synchronous device discovery for AVIOAI2.")
+        logging.debug("Starting device discovery for Yamaha Tio1608-D.")
         dante_devices = cls._run(cls._scan_devices)
         if not dante_devices:
-            logging.warning("No devices returned from async discovery.")
+            logging.warning("No devices returned from discovery.")
             return []
 
         converted_devices = [
-            cls.to_device(d) for d in dante_devices if d.model_id == "DAI2"
+            cls.to_device(d) for d in dante_devices if d.model_id == "1966"
         ]
         logging.info(
             "Converted %d Dante devices to internal Device objects",
@@ -69,7 +69,7 @@ class AVIOAI2Manager(BaseVendor):
             name=device.name,
             model=device.model_id,
             ipv4=str(device.ipv4),
-            nb_channels=2,
+            nb_channels=4,
             port=res.get("multicast_port"),
             multicast_ip=res.get("multicast_ip"),
             rtp_payload=res.get("rtp_payload"),

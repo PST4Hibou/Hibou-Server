@@ -3,7 +3,7 @@ from dataclasses import fields
 
 from ..models.adc_device import ADCDevice
 
-SUPPORTED_DEVICES: set[str] = {"DAI2"}
+SUPPORTED_DEVICES: set[str] = {"DAI2", "1966"}
 
 
 def check_names(devices: list[dict]) -> bool:
