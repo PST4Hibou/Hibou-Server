@@ -54,8 +54,12 @@ class AudioProcess:
 
 if __name__ == "__main__":
     logger.debug(f"Loaded settings: {SETTINGS}")
-    devices = ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
-    # devices = ADCDeviceManager.auto_discover()
+
+    devices = (
+        ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
+        if args.load_devices_from_file
+        else ADCDeviceManager.auto_discover()
+    )
 
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")

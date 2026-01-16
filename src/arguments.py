@@ -22,6 +22,9 @@ parser = argparse.ArgumentParser(
 )
 
 parser.add_argument("--rec-duration", help="In milliseconds", type=int)
+parser.add_argument(
+    "--load-devices-from-file", action="store_true", help="Load devices from file"
+)
 parser.add_argument("--infer-from-folder", help="Use a folder to infer", type=str)
 parser.add_argument(
     "--log-level", help="Change log level from ERROR to DEBUG", type=str
