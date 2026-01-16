@@ -49,6 +49,8 @@ class Settings:
     PTZ_START_AZIMUTH: int
     PTZ_END_AZIMUTH: int
 
+    VIDEO_SAVE_FP: str
+
     INFER_FROM_FOLDER: str
     AI_NUM_PROC: int
     AI_DEVICE: str
@@ -104,6 +106,9 @@ try:
         PTZ_END_AZIMUTH=int(os.getenv("PTZ_END_AZIMUTH")),
         AI_NUM_PROC=int(os.getenv("AI_NUM_PROC")),
         AI_SEED=int(os.getenv("AI_SEED")),
+        VIDEO_SAVE_FP=os.getenv("VIDEO_SAVE_FP"),
     )
+
+
 except TypeError as e:
     raise ValueError(f"Invalid value in .env: {e}. Please check the .env file.")
