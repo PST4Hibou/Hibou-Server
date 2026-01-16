@@ -117,6 +117,7 @@ def diagnose_rtp_devices(auto: bool = True):
         "Multicast IP",
         "RTP Payload",
         "Interface",
+        "Nb Channels",
         "Online",
     ]
     for h in headers:
@@ -132,6 +133,7 @@ def diagnose_rtp_devices(auto: bool = True):
             d.multicast_ip,
             str(d.rtp_payload),
             d.interface,
+            str(d.nb_channels),
             status,
         )
 

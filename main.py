@@ -125,7 +125,7 @@ if __name__ == "__main__":
         ),
     )
 
-    nb_channels = len(devices) * 2
+    nb_channels = sum([x.nb_channels for x in devices])
     frame_duration_s = SETTINGS.AUDIO_CHUNK_DURATION / 1000
     angle_coverage = SETTINGS.AUDIO_ANGLE_COVERAGE
 

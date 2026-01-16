@@ -69,7 +69,7 @@ class Tio1608Manager(BaseVendor):
             name=device.name,
             model=device.model_id,
             ipv4=str(device.ipv4),
-            nb_channels=4,
+            nb_channels=res.get("active_channels"),
             port=res.get("multicast_port"),
             multicast_ip=res.get("multicast_ip"),
             rtp_payload=res.get("rtp_payload"),
