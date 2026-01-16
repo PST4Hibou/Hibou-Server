@@ -59,6 +59,9 @@ if __name__ == "__main__":
 
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")
+    for dev in devices:
+        if not dev.is_online():
+            logging.warning(f"{dev.name} is offline")
 
     now = datetime.datetime.now()
     recs_folder_name = os.path.join(
@@ -126,6 +129,8 @@ if __name__ == "__main__":
     )
 
     nb_channels = sum([x.nb_channels for x in devices])
+    if nb_channels == 0:
+        raise Exception("No ADC devices found! 0 channels available. Exiting.")
     frame_duration_s = SETTINGS.AUDIO_CHUNK_DURATION / 1000
     angle_coverage = SETTINGS.AUDIO_ANGLE_COVERAGE
 
