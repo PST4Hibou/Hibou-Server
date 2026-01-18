@@ -77,9 +77,8 @@ class RTPAudioSource(GstreamerSource):
             )
 
             gst_pipeline_str = (
-                f"udpsrc address={ip_address} port={port} multicast-iface={dev.interface} "
-                f'caps="application/x-rtp, media=(string)audio, clock-rate=(int){dev.clock_rate}, '
-                f'channels=(int){nb_channels}, encoding-name=(string)L24, payload=(int){payload}" ! '
+                f"rtpsrc encoding-name=(string)L24 "
+                f"address={ip_address} port={port} multicast-iface={dev.interface} ! "
                 f"rtpjitterbuffer latency={stream_latency} ! "
                 f"rtpL24depay ! "
                 f"queue ! "
