@@ -63,16 +63,11 @@ class RTPAudioSource(GstreamerSource):
         channel = 0
         for dev in self.devices:
             port = dev.port
-            payload = dev.rtp_payload
             ip_address = dev.multicast_ip
             nb_channels = dev.nb_channels
 
-            tee_declarations = " ".join(
-                f"d.src_{i} ! tee name=t{i}" for i in range(nb_channels)
-            )
-
             appsink_branches = " ".join(
-                f"t{i}. ! queue ! appsink name=appsink_{channel + i}"
+                f"d.src_{i}. ! queue ! appsink name=appsink_{channel + i}"
                 for i in range(nb_channels)
             )
 
@@ -87,8 +82,7 @@ class RTPAudioSource(GstreamerSource):
                 f"audioresample ! "
                 f"audio/x-raw, format=F32LE, channels=(int){nb_channels}, rate={rec_hz} ! "
                 f"deinterleave name=d "
-                f"{tee_declarations} "
-                f"{appsink_branches}"
+                f"{appsink_branches} "
             )
 
             logging.debug(gst_pipeline_str)
@@ -99,17 +93,15 @@ class RTPAudioSource(GstreamerSource):
 
                 record_branches = " ".join(
                     (
-                        f"t{i}. ! audioconvert ! audioresample ! "
-                        f"audio/x-raw, format=F32LE, channels=(int)2, rate={rec_hz} ! "
-                        f"{'volume volume=' + str(SETTINGS.AUDIO_VOLUME) + ' ! ' if i > 0 else ''}"
+                        f"d.src_{i}. ! "
                         f'splitmuxsink location="{save_fp}/'
-                        f'{channel if i == 0 else channel_prefix + str(channel + i)}/%d.wav" '
+                        f'{channel_prefix}{channel + i}/%d.wav" '
                         f"muxer=wavenc max-size-time={record_duration}"
                     )
                     for i in range(nb_channels)
                 )
 
-                gst_pipeline_str += f" {record_branches}"
+                gst_pipeline_str += record_branches
 
             pipeline_strings.append(gst_pipeline_str)
             channel += nb_channels
