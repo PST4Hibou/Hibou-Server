@@ -38,6 +38,6 @@ def get_general_phantom_power():
     return is_general_phantom_power_powered_on
 
 
-set_phantom_power(0, 1)
+set_phantom_power(0, 0)
 set_hagain(1, 10)
 print(get_general_phantom_power())
