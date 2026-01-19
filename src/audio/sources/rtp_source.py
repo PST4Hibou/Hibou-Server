@@ -65,15 +65,18 @@ class RTPAudioSource(GstreamerSource):
             port = dev.port
             ip_address = dev.multicast_ip
             nb_channels = dev.nb_channels
+            payload = dev.rtp_payload
 
             appsink_branches = " ".join(
-                f"d.src_{i}. ! queue ! appsink name=appsink_{channel + i}"
+                f"d.src_{i} ! queue ! appsink name=appsink_{channel + i}"
                 for i in range(nb_channels)
             )
 
+            # rtpsrc has issues using & figuring out the net stream.
             gst_pipeline_str = (
-                f"rtpsrc encoding-name=(string)L24 "
-                f"address={ip_address} port={port} multicast-iface={dev.interface} ! "
+                f"udpsrc address={ip_address} port={port} multicast-iface={dev.interface} "
+                f'caps="application/x-rtp, media=(string)audio, clock-rate=(int){dev.clock_rate}, '
+                f'channels=(int){nb_channels}, encoding-name=(string)L24, payload=(int){payload}" ! '
                 f"rtpjitterbuffer latency={stream_latency} ! "
                 f"rtpL24depay ! "
                 f"queue ! "
@@ -93,7 +96,7 @@ class RTPAudioSource(GstreamerSource):
 
                 record_branches = " ".join(
                     (
-                        f"d.src_{i}. ! "
+                        f"d.src_{i} ! "
                         f'splitmuxsink location="{save_fp}/'
                         f'{channel_prefix}{channel + i}/%d.wav" '
                         f"muxer=wavenc max-size-time={record_duration}"
