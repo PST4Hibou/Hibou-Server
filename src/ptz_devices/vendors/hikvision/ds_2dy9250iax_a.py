@@ -1,3 +1,4 @@
+from src.computer_vision.rtsp_stream import RtspSource
 from src.ptz_devices.vendors.base_vendor import BaseVendor
 from hikvisionapi import Client
 
@@ -6,7 +7,6 @@ import threading
 import logging
 import math
 import time
-import cv2
 
 
 class DS2DY9250IAXA(BaseVendor):
@@ -86,9 +86,10 @@ class DS2DY9250IAXA(BaseVendor):
         self._last_angle_update_time = 0
 
         self.rtsp_url = f"rtsp://{username}:{password}@{host}:{rtsp_port}/Streaming/Channels/10{video_channel}/"
-        self.rtsp_stream = cv2.VideoCapture(self.rtsp_url)
+        self.rtsp_stream = RtspSource(self.rtsp_url)
+        self.rtsp_stream.start()
 
-        if not self.rtsp_stream.isOpened():
+        if not self.rtsp_stream.is_opened():
             logging.error("❌ Cannot open RTSP stream. Check the URL or credentials.")
             logging.error(
                 f"RTSP URL: rtsp://{username}:XXX@{host}:{rtsp_port}/Streaming/Channels/10{video_channel}/"
@@ -413,6 +414,6 @@ class DS2DY9250IAXA(BaseVendor):
     def release_stream(self):
         """Safely release the RTSP stream."""
         if hasattr(self, "rtsp_stream") and self.rtsp_stream is not None:
-            self.rtsp_stream.release()
+            self.rtsp_stream.stop()
             self.rtsp_stream = None
             logging.info("📷 RTSP stream released.")
