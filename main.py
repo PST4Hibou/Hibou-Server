@@ -1,6 +1,6 @@
 from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram, StftSpectrogram
-from src.ptz_devices.vendors.custom.opencv_stream import OpenCVStreamingVendor
 from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
+from src.ptz_devices.utils.calibration import start_ptz_calibration
 from src.adc_devices.adc_device_manager import ADCDeviceManager
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
 from src.computer_vision.drone_detection import DroneDetection
@@ -12,6 +12,7 @@ from src.audio.debug.radar import RadarPlot
 from src.audio.energy import compute_energy
 from src.audio.play import play_sample
 from src.ai.audio import ModelProxy
+from src.doctor import run_doctor
 from src.settings import SETTINGS
 from src.arguments import args
 from src.audio import Channel
@@ -19,10 +20,24 @@ from src.logger import logger
 from collections import deque
 from time import sleep
 
+
 import numpy as np
 import datetime
 import logging
 import os
+
+
+def apply_arguments():
+    if args.rec_duration:
+        SETTINGS.AUDIO_CHUNK_DURATION = int(args.rec_duration) * 10**6
+    if args.infer_from_folder:
+        SETTINGS.INFER_FROM_FOLDER = args.infer_from_folder
+    if args.log_level:
+        SETTINGS.LOG_LEVEL = args.log_level
+    if args.doctor:
+        run_doctor()
+    if args.ptz_calibration:
+        start_ptz_calibration()
 
 
 class AudioProcess:
@@ -53,7 +68,10 @@ class AudioProcess:
 
 
 if __name__ == "__main__":
+    apply_arguments()
+
     logger.debug(f"Loaded settings: {SETTINGS}")
+
     devices = ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
     # devices = ADCDeviceManager.auto_discover()
 
@@ -90,23 +108,23 @@ if __name__ == "__main__":
         model_type="yolo", model_path="assets/computer_vision_models/best.pt"
     )
 
-    # PTZController(
-    #     "main_camera",
-    #     DS2DY9250IAXA,
-    #     host=SETTINGS.PTZ_HOST,
-    #     username=SETTINGS.PTZ_USERNAME,
-    #     password=SETTINGS.PTZ_PASSWORD,
-    #     start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
-    #     end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
-    #     rtsp_port=SETTINGS.PTZ_RTSP_PORT,
-    #     video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
-    # )
+    PTZController(
+        "main_camera",
+        DS2DY9250IAXA,
+        host=SETTINGS.PTZ_HOST,
+        username=SETTINGS.PTZ_USERNAME,
+        password=SETTINGS.PTZ_PASSWORD,
+        start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
+        end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
+        rtsp_port=SETTINGS.PTZ_RTSP_PORT,
+        video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
+    )
     # PTZController(
     #     "opencv_vendor",
     #     OpenCVStreamingVendor,
     #     video_channel=0,
     # )
-    # stream = PTZController("main_camera").get_video_stream()
+    stream = PTZController("main_camera").get_video_stream()
 
     tracker = PIDTracker(
         yaw_pid_coefs=PIDTracker.PidCoefs(
@@ -148,9 +166,9 @@ if __name__ == "__main__":
 
     try:
         source.start()
-        # drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
+        drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
         print("Listening started. Press Ctrl+C to stop.")
-        # PTZController("main_camera").go_to_angle(phi=30)
+        PTZController("main_camera").go_to_angle(phi=30)
 
         # Main loop
         while True:
