@@ -61,7 +61,7 @@ class RtspSource(VideoSource, VideoRecorder):
                 f'rtspsrc location="{rtsp_url}" protocols=tcp latency=0 ! '
                 "rtpjitterbuffer latency=200 ! rtph264depay ! h264parse ! tee name=h264tee "
                 "h264tee. ! queue max-size-buffers=2 leaky=downstream ! avdec_h264 ! queue ! videoconvert ! video/x-raw,format=RGB ! appsink name=app_sink max-buffers=1 drop=true sync=false "
-                "h264tee. ! queue max-size-buffers=32 leaky=downstream ! valve name=rec_valve drop=true ! queue ! splitmuxsink name=rec_sink muxer=matroskamux"
+                "h264tee. ! queue max-size-buffers=32 leaky=downstream ! valve name=rec_valve drop=true ! queue ! splitmuxsink name=rec_sink muxer=matroskamux async-handling=true "
             )
 
             self._create_pipeline(pipeline_str)
