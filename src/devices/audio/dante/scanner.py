@@ -45,11 +45,14 @@ class DanteADCScanner:
             return []
 
         if model_id:
-            dante_devices = filter(lambda d: d.model_id == model_id, dante_devices)
+            dante_devices = list(
+                filter(lambda d: d.model_id == model_id, dante_devices)
+            )
         converted_devices = [cls.to_device(d) for d in dante_devices]
         logging.info(
-            "Converted %d Dante devices to internal Device objects",
+            "Converted %d Dante devices to internal Device objects for %s",
             len(converted_devices),
+            model_id,
         )
         return converted_devices
 

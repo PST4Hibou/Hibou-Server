@@ -1,7 +1,6 @@
 import logging
 import os
 
-from src.adc_devices.models.adc_device import ADCDevice
 from src.audio.sources.gstreamer_source import GstreamerSource
 from src.settings import SETTINGS
 

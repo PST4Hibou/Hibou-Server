@@ -1,5 +1,5 @@
+from src.devices.audio.audio_device_controller import ADCControllerManager
 from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
-from src.adc_devices.adc_device_manager import ADCDeviceManager
 from src.ptz_devices.ptz_controller import PTZController
 from src.network.helpers.networks import get_networks
 from src.network.helpers.ping import ping
@@ -102,11 +102,12 @@ def diagnose_rtp_devices(auto: bool = True):
     )
     print_current_diagnostic(section_title)
 
-    devices = (
-        ADCDeviceManager.auto_discover()
-        if auto
-        else ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
-    )
+    controller_manager = ADCControllerManager()
+    if SETTINGS.DEVICES_CONFIG_PATH:
+        controller_manager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
+    else:
+        controller_manager.auto_discover()
+    devices = controller_manager.adc_devices
 
     table = Table(show_header=True, header_style="bold cyan")
     headers = [
