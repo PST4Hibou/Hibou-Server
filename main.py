@@ -1,7 +1,11 @@
+from pathlib import Path
+
 from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram, StftSpectrogram
+from src.devices.audio.controllers.yamaha.tio1608_d import YamahaTio1608Controller
+from src.network.protocol.yamaha_remote_control import YamahaRemoteControl
 from src.ptz_devices.vendors.custom.opencv_stream import OpenCVStreamingVendor
 from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
-from src.adc_devices.adc_device_manager import ADCDeviceManager
+from src.devices.audio.audio_device_controller import ADCControllerManager
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
 from src.computer_vision.drone_detection import DroneDetection
 from src.audio.sources.file_source import FileAudioSource
@@ -55,11 +59,12 @@ class AudioProcess:
 if __name__ == "__main__":
     logger.debug(f"Loaded settings: {SETTINGS}")
 
-    devices = (
-        ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
-        if args.load_devices_from_file
-        else ADCDeviceManager.auto_discover()
-    )
+    controller_manager = ADCControllerManager()
+    if SETTINGS.DEVICES_CONFIG_PATH:
+        controller_manager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
+    else:
+        controller_manager.auto_discover()
+    devices = controller_manager.adc_devices
 
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")

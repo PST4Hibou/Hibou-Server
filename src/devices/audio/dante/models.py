@@ -1,10 +1,9 @@
 from dataclasses import dataclass
-
 from src.network.helpers.ping import ping
 
 
 @dataclass
-class ADCDevice:
+class DanteADCDevice:
     name: str
     model: str
     ipv4: str
@@ -15,5 +14,11 @@ class ADCDevice:
     interface: str
     clock_rate: int
 
-    def is_online(self):
+    def is_online(self) -> bool:
+        """
+        Check if the device is online.
+        This is a blocking function.
+        Returns:
+
+        """
         return ping(self.ipv4)

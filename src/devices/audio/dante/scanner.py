@@ -1,17 +1,15 @@
 import asyncio
 import logging
-
-from src.network.helpers.interface import get_interface_from_ipv4
-from src.network.multicast import get_multicast_stream_info
-from netaudio import DanteBrowser, DanteDevice
-from ...models.adc_device import ADCDevice
-from ..base_vendor import BaseVendor
 from typing import List
 
+from netaudio import DanteBrowser, DanteDevice
 
-class AVIOAI2Manager(BaseVendor):
-    """Manager for Audinate AVIO AI2 devices."""
+from src.devices.audio.dante.models import DanteADCDevice
+from src.network.helpers.interface import get_interface_from_ipv4
+from src.network.multicast import get_multicast_stream_info
 
+
+class DanteADCScanner:
     @staticmethod
     def _run(async_fn):
         """Safely run an async function synchronously."""
@@ -38,25 +36,28 @@ class AVIOAI2Manager(BaseVendor):
         return devices
 
     @classmethod
-    def scan_devices(cls) -> List[ADCDevice]:
+    def scan_devices(cls, model_id: str = None) -> List[DanteADCDevice]:
         """Synchronous wrapper for asynchronous Dante discovery."""
-        logging.debug("Starting synchronous device discovery for AVIOAI2.")
+        logging.debug("Starting device discovery for Yamaha Tio1608-D.")
         dante_devices = cls._run(cls._scan_devices)
         if not dante_devices:
-            logging.warning("No devices returned from async discovery.")
+            logging.warning("No devices returned from discovery.")
             return []
 
-        converted_devices = [
-            cls.to_device(d) for d in dante_devices if d.model_id == "DAI2"
-        ]
+        if model_id:
+            dante_devices = list(
+                filter(lambda d: d.model_id == model_id, dante_devices)
+            )
+        converted_devices = [cls.to_device(d) for d in dante_devices]
         logging.info(
-            "Converted %d Dante devices to internal Device objects",
+            "Converted %d Dante devices to internal Device objects for %s",
             len(converted_devices),
+            model_id,
         )
         return converted_devices
 
     @staticmethod
-    def to_device(device: DanteDevice) -> ADCDevice:
+    def to_device(device: DanteDevice) -> DanteADCDevice:
         """Convert DanteDevice to your internal Device model."""
         interface = get_interface_from_ipv4(device.ipv4)
         if not interface:
@@ -65,7 +66,7 @@ class AVIOAI2Manager(BaseVendor):
                 "Please verify that the IP address is part of the configured target network."
             )
         res = get_multicast_stream_info(interface, device.ipv4)
-        return ADCDevice(
+        return DanteADCDevice(
             name=device.name,
             model=device.model_id,
             ipv4=str(device.ipv4),
