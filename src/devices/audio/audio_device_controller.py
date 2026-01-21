@@ -100,8 +100,12 @@ class ADCControllerManager:
                                 f"No IP address found for {controller_name} controller"
                             )
                             continue
-
-                    controller = YamahaTio1608Controller(ip, auto_discovery=False)
+                    default_ha_gains = None
+                    if controller_data.get("ha_gains"):
+                        default_ha_gains = controller_data.get("ha_gains")
+                    controller = YamahaTio1608Controller(
+                        ip, auto_discovery=False, default_ha_gains=default_ha_gains
+                    )
 
                     # Load devices from JSON file instead of using scanned devices
                     if devices_data:
