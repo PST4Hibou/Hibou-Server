@@ -1,4 +1,4 @@
-from src.ptz_devices.vendors.base_vendor import BaseVendor
+from src.devices.camera.vendors.base_vendor import BaseVendor
 from typing import Type
 
 import logging

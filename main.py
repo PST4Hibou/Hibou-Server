@@ -1,16 +1,11 @@
-from pathlib import Path
-
 from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram, StftSpectrogram
-from src.devices.audio.controllers.yamaha.tio1608_d import YamahaTio1608Controller
-from src.network.protocol.yamaha_remote_control import YamahaRemoteControl
-from src.ptz_devices.vendors.custom.opencv_stream import OpenCVStreamingVendor
-from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
 from src.devices.audio.audio_device_controller import ADCControllerManager
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
 from src.computer_vision.drone_detection import DroneDetection
 from src.audio.sources.file_source import FileAudioSource
-from src.ptz_devices.ptz_controller import PTZController
+from src.devices.camera.ptz_controller import PTZController
 from src.audio.sources.rtp_source import RTPAudioSource
+from src.devices.camera.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
 from src.tracking.pid_tracker import PIDTracker
 from src.audio.debug.radar import RadarPlot
 from src.audio.energy import compute_energy
@@ -102,23 +97,23 @@ if __name__ == "__main__":
         model_type="yolo", model_path="assets/computer_vision_models/best.pt"
     )
 
-    # PTZController(
-    #     "main_camera",
-    #     DS2DY9250IAXA,
-    #     host=SETTINGS.PTZ_HOST,
-    #     username=SETTINGS.PTZ_USERNAME,
-    #     password=SETTINGS.PTZ_PASSWORD,
-    #     start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
-    #     end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
-    #     rtsp_port=SETTINGS.PTZ_RTSP_PORT,
-    #     video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
-    # )
+    PTZController(
+        "main_camera",
+        DS2DY9250IAXA,
+        host=SETTINGS.PTZ_HOST,
+        username=SETTINGS.PTZ_USERNAME,
+        password=SETTINGS.PTZ_PASSWORD,
+        start_azimuth=SETTINGS.PTZ_START_AZIMUTH,
+        end_azimuth=SETTINGS.PTZ_END_AZIMUTH,
+        rtsp_port=SETTINGS.PTZ_RTSP_PORT,
+        video_channel=SETTINGS.PTZ_VIDEO_CHANNEL,
+    )
     # PTZController(
     #     "opencv_vendor",
     #     OpenCVStreamingVendor,
     #     video_channel=0,
     # )
-    # stream = PTZController("main_camera").get_video_stream()
+    stream = PTZController("main_camera").get_video_stream()
 
     tracker = PIDTracker(
         yaw_pid_coefs=PIDTracker.PidCoefs(
@@ -162,7 +157,7 @@ if __name__ == "__main__":
 
     try:
         source.start()
-        # drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
+        drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
         print("Listening started. Press Ctrl+C to stop.")
         # PTZController("main_camera").go_to_angle(phi=30)
 

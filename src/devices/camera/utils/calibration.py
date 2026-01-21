@@ -1,7 +1,7 @@
-from ..vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
-from .ui_controller import start_ui_controller
-from ..ptz_controller import PTZController
-from ...settings import SETTINGS
+from src.devices.camera.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
+from src.devices.camera.utils.ui_controller import start_ui_controller
+from src.devices.camera.ptz_controller import PTZController
+from src.settings import SETTINGS
 
 
 def start_ptz_calibration():

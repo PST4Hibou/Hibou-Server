@@ -5,7 +5,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
-from src.ptz_devices.ptz_controller import PTZController
+from src.devices.camera.ptz_controller import PTZController
 
 
 def start_ui_controller(ptz_name: str, text_bottom: str = ""):

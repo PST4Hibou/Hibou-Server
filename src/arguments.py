@@ -1,4 +1,4 @@
-from src.ptz_devices.utils.calibration import start_ptz_calibration
+from src.devices.camera.utils.calibration import start_ptz_calibration
 from src.doctor import run_doctor
 from src.settings import SETTINGS
 
