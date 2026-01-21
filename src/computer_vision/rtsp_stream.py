@@ -43,6 +43,7 @@ class RtspSource(VideoSource, VideoRecorder):
         self._app_sink: GstApp.AppSink | None = None
         self._rec_sink: Gst.Element | None = None
         self._rec_valve: Gst.Element | None = None
+        self._rec_pad: Gst.Pad | None = None
         self._plays: bool = False
         self._last_frame = None
         self._fps: float = 0.0
@@ -96,8 +97,14 @@ class RtspSource(VideoSource, VideoRecorder):
         self._app_sink = self._pipeline.get_by_name("app_sink")
         self._rec_sink = self._pipeline.get_by_name("rec_sink")
         self._rec_valve = self._pipeline.get_by_name("rec_valve")
+        self._rec_pad = self._rec_sink.get_static_pad("video")
 
-        if not self._app_sink or not self._rec_sink or not self._rec_valve:
+        if (
+            not self._app_sink
+            or not self._rec_sink
+            or not self._rec_valve
+            or not self._rec_pad
+        ):
             raise RuntimeError("Failed to get RTSP pipeline elements")
 
         self._rec_sink.connect("format-location", on_format_location)
@@ -208,6 +215,7 @@ class RtspSource(VideoSource, VideoRecorder):
 
         if self._record_requests == 0:
             self._rec_valve.set_property("drop", True)
+            self._rec_pad.send_event(Gst.Event.new_eos())
 
     @override
     def get_fps(self) -> float:
