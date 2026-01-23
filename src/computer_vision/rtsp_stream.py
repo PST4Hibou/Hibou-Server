@@ -15,16 +15,12 @@ gi.require_version("GstApp", "1.0")
 from gi.repository import Gst, GstApp
 
 
-def on_format_location(_, fragment_id: int):
-    return f"{SETTINGS.VIDEO_SAVE_FP}/{time.strftime("%Y%m%d-%H%M%S")}-{fragment_id:05d}.mp4"
-
-
 class RtspSource(VideoSource, VideoRecorder):
     """RTSP source + recorder using GStreamer.
 
     This class builds a GStreamer pipeline that reads an RTSP H264 stream, decodes
     frames for use in the application (via an appsink) and optionally records the
-    incoming H264 stream to disk (via a splitmuxsink). It implements the
+    incoming H264 stream to disk (via separate pipelines). It implements the
     VideoSource interface (frame retrieval) and VideoRecorder (start/stop
     recording).
 
@@ -39,79 +35,79 @@ class RtspSource(VideoSource, VideoRecorder):
         super().__init__()
 
         self._record_requests: int = 0
-        self._pipeline: Gst.Pipeline | None = None
+        self._app_pipeline: Gst.Pipeline | None = None
+        self._rec_pipeline: Gst.Pipeline | None = None
         self._app_sink: GstApp.AppSink | None = None
-        self._rec_sink: Gst.Element | None = None
-        self._rec_valve: Gst.Element | None = None
-        self._rec_pad: Gst.Pad | None = None
         self._plays: bool = False
         self._last_frame = None
         self._fps: float = 0.0
+        self._current_recording_file = None
+        self._rtsp_url = rtsp_url
 
         # Setting GST's logging level to output.
-        # see https://gstreamer.freedesktop.org/documentation/tutorials/basic/debugging-tools.html
         Gst.debug_set_default_threshold(args.gst_dbg_level)
         if not Gst.init_check(None):
             raise RuntimeError("Could not initialize GStreamer")
 
-        # Create dir if missing, splitmuxsink will not create it.
+        # Create dir if missing
         Path(SETTINGS.VIDEO_SAVE_FP).mkdir(parents=True, exist_ok=True)
 
         try:
-            pipeline_str = (
-                f'rtspsrc location="{rtsp_url}" protocols=tcp latency=0 ! '
-                "rtpjitterbuffer latency=200 ! rtph264depay ! h264parse ! tee name=h264tee "
-                "h264tee. ! queue max-size-buffers=2 leaky=downstream ! avdec_h264 ! queue ! videoconvert ! video/x-raw,format=RGB ! appsink name=app_sink max-buffers=1 drop=true sync=false "
-                "h264tee. ! queue max-size-buffers=32 leaky=downstream ! valve name=rec_valve drop=true ! queue ! splitmuxsink name=rec_sink muxer=matroskamux async-handling=true "
+            self._create_pipeline(
+                (
+                    f'rtspsrc location="{rtsp_url}" protocols=tcp latency=0 ! '
+                    "rtpjitterbuffer latency=200 ! rtph264depay ! h264parse ! "
+                    "avdec_h264 ! videoconvert ! video/x-raw,format=RGB ! "
+                    "appsink name=app_sink max-buffers=1 drop=true sync=false emit-signals=true"
+                )
             )
+            self._connect()
 
-            self._create_pipeline(pipeline_str)
-            self._connect_sinks()
-        except Exception:
+        except Exception as e:
             # Clean up any created pipelines
-            self._pipeline.set_state(Gst.State.NULL)
-            raise
+            if self._rec_pipeline:
+                self._rec_pipeline.set_state(Gst.State.NULL)
+            if self._app_pipeline:
+                self._app_pipeline.set_state(Gst.State.NULL)
+            raise RuntimeError(f"Failed to create pipeline: {e}")
 
     def _create_pipeline(self, pipeline_str: str) -> None:
-        """Create the GStreamer pipeline from a pipeline description string.
+        """
+        Create the GST pipeline according to the provided description.
 
         Args:
-            pipeline_str: The textual GStreamer pipeline description to parse.
+            pipeline_str: the pipeline description.
 
-        Raises:
-            RuntimeError: If GStreamer fails to parse or create the pipeline.
+        Returns:
+
         """
-        self._pipeline = Gst.parse_launch(pipeline_str)
-        if not self._pipeline:
-            raise RuntimeError("Failed to parse pipeline")
+        self._app_pipeline = Gst.parse_launch(pipeline_str)
+        if not self._app_pipeline:
+            raise RuntimeError("Failed to parse app pipeline")
 
-    def _connect_sinks(self) -> None:
-        """Look up and configure the appsink/recorder elements from the pipeline.
+    def _connect(self) -> None:
+        self._app_sink = self._app_pipeline.get_by_name("app_sink")
+        if not self._app_sink:
+            raise RuntimeError("Failed to get app sink")
 
-        This method locates the named elements of the pipeline, and sets up callbacks
-        and properties as needed.
-
-        Raises:
-            RuntimeError: If any required pipeline element cannot be found.
-        """
-        self._app_sink = self._pipeline.get_by_name("app_sink")
-        self._rec_sink = self._pipeline.get_by_name("rec_sink")
-        self._rec_valve = self._pipeline.get_by_name("rec_valve")
-        self._rec_pad = self._rec_sink.get_static_pad("video")
-
-        if (
-            not self._app_sink
-            or not self._rec_sink
-            or not self._rec_valve
-            or not self._rec_pad
-        ):
-            raise RuntimeError("Failed to get RTSP pipeline elements")
-
-        self._rec_sink.connect("format-location", on_format_location)
-        # Set sink properties
-        self._app_sink.set_property("emit-signals", True)
-        # Connect signal callback
         self._app_sink.connect("new-sample", self._handle_new_sample)
+
+    @staticmethod
+    def _create_recording_pipeline(rtsp_url: str, output_file: str) -> Gst.Pipeline:
+        """Create a fresh recording pipeline for each recording session."""
+        rec_pipeline_str = (
+            f'rtspsrc location="{rtsp_url}" protocols=tcp latency=0 ! '
+            "rtpjitterbuffer latency=200 ! rtph264depay ! "
+            "h264parse config-interval=-1 ! "
+            "mp4mux faststart=true ! "
+            f'filesink name=rec_filesink location="{output_file}" async=false'
+        )
+
+        pipeline = Gst.parse_launch(rec_pipeline_str)
+        if not pipeline:
+            raise RuntimeError("Failed to parse recording pipeline")
+
+        return pipeline
 
     def _handle_new_sample(self, sink: GstApp.AppSink) -> Gst.FlowReturn:
         """GStreamer appsink callback to handle a new decoded sample.
@@ -134,7 +130,8 @@ class RtspSource(VideoSource, VideoRecorder):
         caps = sample.get_caps().get_structure(0)
         if self._fps == 0.0:
             fract = caps.get_fraction("framerate")  # fract = fps_num, fps_den
-            self._fps = fract[1] / fract[0]
+            if fract[0] > 0:
+                self._fps = fract[1] / fract[0]
 
         buf = sample.get_buffer()
         if not buf:
@@ -150,11 +147,10 @@ class RtspSource(VideoSource, VideoRecorder):
                 map_info.data, dtype=np.uint8, count=h * w * 3
             ).reshape((h, w, 3))
             self._last_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            buf.unmap(map_info)
         except Exception as e:
-            # Log error or handle appropriately
             print(f"Error in on_sample callback for RTSP source: {e}")
-            return Gst.FlowReturn.ERROR
+        finally:
+            buf.unmap(map_info)
 
         return Gst.FlowReturn.OK
 
@@ -168,8 +164,14 @@ class RtspSource(VideoSource, VideoRecorder):
         Raises:
             RuntimeError: If GStreamer fails to change to the PLAYING state.
         """
-        if self._pipeline.set_state(Gst.State.PLAYING) == Gst.StateChangeReturn.FAILURE:
-            raise RuntimeError("Failed to start pipeline")
+        if self._plays:
+            return
+
+        if (
+            self._app_pipeline.set_state(Gst.State.PLAYING)
+            == Gst.StateChangeReturn.FAILURE
+        ):
+            raise RuntimeError("Failed to start app pipeline")
 
         self._plays = True
 
@@ -179,17 +181,24 @@ class RtspSource(VideoSource, VideoRecorder):
 
         Transitions the pipeline to NULL state. Consumers should call this
         when the source is no longer needed to easy the CPU & memory usage of GST.
+        Calling this function will also stop the pending recording if one is being done.
 
         Raises:
             RuntimeError: If GStreamer fails to change to the NULL state.
         """
-        if self._pipeline.set_state(Gst.State.NULL) == Gst.StateChangeReturn.FAILURE:
-            raise RuntimeError("Failed to stop pipeline")
+        if self._rec_pipeline and self._record_requests > 0:
+            self._stop_recording_pipeline()
+
+        if (
+            self._app_pipeline.set_state(Gst.State.NULL)
+            == Gst.StateChangeReturn.FAILURE
+        ):
+            raise RuntimeError("Failed to stop app pipeline")
 
         self._plays = False
 
     @override
-    def start_recording(self):
+    def start_recording(self) -> None:
         """Begin recording the incoming stream to disk.
 
         This method is reference-counted: the first caller will create a new
@@ -197,13 +206,28 @@ class RtspSource(VideoSource, VideoRecorder):
         ``stop_recording()`` to actually stop the recording.
         """
         if self._record_requests == 0:
-            self._rec_sink.emit("split-now")
-            self._rec_valve.set_property("drop", False)
+            self._current_recording_file = (
+                f"{SETTINGS.VIDEO_SAVE_FP}/{time.strftime("%Y%m%d-%H%M%S")}.mp4"
+            )
+
+            self._rec_pipeline = self._create_recording_pipeline(
+                self._rtsp_url,  # Note: You need to store rtsp_url in __init__
+                self._current_recording_file,
+            )
+
+            if not self._rec_pipeline:
+                raise RuntimeError("Failed to create recording pipeline")
+
+            if (
+                self._rec_pipeline.set_state(Gst.State.PLAYING)
+                == Gst.StateChangeReturn.FAILURE
+            ):
+                self._rec_pipeline = None
+                raise RuntimeError("Failed to start recording pipeline")
 
         self._record_requests += 1
 
-    @override
-    def stop_recording(self) -> None:
+    def _stop_recording_pipeline(self) -> None:
         """Stop a previously requested recording.
 
         Decrements the internal record-request counter. When the counter reaches
@@ -211,55 +235,53 @@ class RtspSource(VideoSource, VideoRecorder):
         does nothing if recording was not active, but callers should ensure
         balanced start/stop calls.
         """
+        if not self._rec_pipeline:
+            return
+
+        """
+        We MUST be very precautionous about the pipeline messages getting through,
+        and let the time for finalization of the file. Not doing so can result in a
+        few ugly things: Pipeline purely stopped, file not readable, etc.
+        """
+
+        # Send EOS event to properly finalize the file
+        self._rec_pipeline.send_event(Gst.Event.new_eos())
+
+        # Wait for EOS to propagate
+        bus = self._rec_pipeline.get_bus()
+        bus.timed_pop_filtered(
+            Gst.CLOCK_TIME_NONE, Gst.MessageType.EOS | Gst.MessageType.ERROR
+        )
+
+        # Stop the pipeline
+        self._rec_pipeline.set_state(Gst.State.NULL)
+        self._rec_pipeline = None
+
+        self._current_recording_file = None
+
+    @override
+    def stop_recording(self) -> None:
+        """Stop recording and finalize the file."""
+        if self._record_requests == 0:
+            return
+
         self._record_requests -= 1
 
         if self._record_requests == 0:
-            self._rec_valve.set_property("drop", True)
-            self._rec_pad.send_event(Gst.Event.new_eos())
+            self._stop_recording_pipeline()
 
     @override
     def get_fps(self) -> float:
-        """Return the frames-per-second of the incoming stream.
-
-        The FPS is read from the appsink caps the first time this method is
-        called and cached for subsequent calls. If FPS cannot be determined
-        the method returns 0.0.
-
-        Returns:
-            float: The stream's FPS, or 0.0 if unknown.
-        """
-        if self._fps != 0.0:
-            return self._fps
-
-        caps = self._app_sink.get_property("caps")
-        if caps:
-            struct = caps.get_structure(0)
-            fps_num, fps_den = struct.get_fraction("framerate", 0, 1)
-            self._fps = fps_den / fps_num if fps_den else 0.0
-
+        """Return the frames-per-second of the incoming stream."""
         return self._fps
 
     @override
     def get_frame(self) -> tuple[bool, any]:
-        """Retrieve the most recent frame delivered by the appsink.
-
-        This method returns a tuple (ok, frame) where `ok` indicates whether a
-        valid frame was returned and `frame` is the OpenCV-compatible BGR
-        numpy array. The last-frame buffer is cleared after reading so repeated
-        calls without a new frame will return (False, None).
-
-        Returns:
-            tuple[bool, any]: (True, frame) when a frame is available, else
-            (False, None).
-        """
+        """Retrieve the most recent frame."""
         v, self._last_frame = self._last_frame, None
         return (self._plays and v is not None), v
 
     @override
     def is_opened(self) -> bool:
-        """Check if the RTSP stream is currently active.
-
-        Returns:
-            bool: True if the stream is playing, False otherwise
-        """
+        """Check if the stream is active."""
         return self._plays
