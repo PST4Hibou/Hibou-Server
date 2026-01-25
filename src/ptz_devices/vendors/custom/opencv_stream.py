@@ -7,7 +7,7 @@ import logging
 
 class OpenCVStreamingVendor(BaseVendor):
     """
-    Singleton for the OpenCV video streaming from computer camera or video file.
+    Singleton for OpenCV video streaming from a RTSP source using GST.
     """
 
     _instance = None
