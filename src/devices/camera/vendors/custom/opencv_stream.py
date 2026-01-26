@@ -1,13 +1,13 @@
-from src.devices.camera.vendors.base_vendor import BaseVendor
+from src.ptz_devices.vendors.base_vendor import BaseVendor
+from src.computer_vision.rtsp_stream import RtspSource
 
 import threading
 import logging
-import cv2
 
 
 class OpenCVStreamingVendor(BaseVendor):
     """
-    Singleton for the OpenCV video streaming from computer camera or video file.
+    Singleton for OpenCV video streaming from a RTSP source using GST.
     """
 
     _instance = None
@@ -35,9 +35,10 @@ class OpenCVStreamingVendor(BaseVendor):
             return
 
         self._initialized = True  # Flag so __init__ runs only once
-        self._cap = cv2.VideoCapture(video_channel)
+        self._cap = RtspSource(video_channel)
+        self._cap.start()
 
-        if not self._cap.isOpened():
+        if not self._cap.is_opened():
             logging.error("Cannot open stream.")
         else:
             logging.info("Computer initialized successfully.")
@@ -66,6 +67,6 @@ class OpenCVStreamingVendor(BaseVendor):
     def release_stream(self):
         """Safely release the video stream."""
         if hasattr(self, "_cap") and self._cap is not None:
-            self._cap.release()
+            self._cap.stop()
             self._cap = None
             logging.info("Capture released.")

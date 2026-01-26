@@ -1,16 +1,20 @@
 from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram, StftSpectrogram
+from src.devices.camera.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
+from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
 from src.devices.audio.audio_device_controller import ADCControllerManager
+from src.ptz_devices.utils.calibration import start_ptz_calibration
+from src.adc_devices.adc_device_manager import ADCDeviceManager
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
 from src.computer_vision.drone_detection import DroneDetection
-from src.audio.sources.file_source import FileAudioSource
 from src.devices.camera.ptz_controller import PTZController
+from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
-from src.devices.camera.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
 from src.tracking.pid_tracker import PIDTracker
 from src.audio.debug.radar import RadarPlot
 from src.audio.energy import compute_energy
 from src.audio.play import play_sample
 from src.ai.audio import ModelProxy
+from src.doctor import run_doctor
 from src.settings import SETTINGS
 from src.arguments import args
 from src.audio import Channel
@@ -22,6 +26,19 @@ import numpy as np
 import datetime
 import logging
 import os
+
+
+def apply_arguments():
+    if args.rec_duration:
+        SETTINGS.AUDIO_CHUNK_DURATION = int(args.rec_duration) * 10**6
+    if args.infer_from_folder:
+        SETTINGS.INFER_FROM_FOLDER = args.infer_from_folder
+    if args.log_level:
+        SETTINGS.LOG_LEVEL = args.log_level
+    if args.doctor:
+        run_doctor()
+    if args.ptz_calibration:
+        start_ptz_calibration()
 
 
 class AudioProcess:
@@ -52,6 +69,8 @@ class AudioProcess:
 
 
 if __name__ == "__main__":
+    apply_arguments()
+
     logger.debug(f"Loaded settings: {SETTINGS}")
 
     controller_manager = ADCControllerManager()
@@ -159,7 +178,7 @@ if __name__ == "__main__":
         source.start()
         drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
         print("Listening started. Press Ctrl+C to stop.")
-        # PTZController("main_camera").go_to_angle(phi=30)
+        PTZController("main_camera").go_to_angle(phi=30)
 
         # Main loop
         while True:

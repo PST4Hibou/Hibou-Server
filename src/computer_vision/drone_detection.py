@@ -1,5 +1,6 @@
 import time
 
+from src.computer_vision.video_source import VideoSource
 from ultralytics.engine.results import Results
 from .models.yolo_model import YOLOModel
 from .utils import draw_detections
@@ -17,8 +18,8 @@ class DroneDetection:
         self.model = YOLOModel(model_path)
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
-        self._stream: cv2.VideoCapture | None = None
-        self._fps = 60.0
+        self._stream: VideoSource | None = None
+        self._fps = 0.0
 
         self.results_queue = deque(maxlen=1)
 
@@ -26,17 +27,16 @@ class DroneDetection:
 
     def _run_detection(self, display: bool = True):
         """Internal method running detection loop in a thread."""
-        if self._stream is None or not self._stream.isOpened():
+        if self._stream is None or not self._stream.is_opened():
             logging.error("Invalid stream")
             return
 
         logging.info("Detection loop started")
 
         while not self._stop_event.is_set():
-            start = time.time()
-
-            ret, frame = self._stream.read()
+            ret, frame = self._stream.get_frame()
             if not ret:
+                self._sleep()
                 continue
 
             # FASTEST WAY — YOLO predict()
@@ -61,30 +61,41 @@ class DroneDetection:
                     self.stop()
                     break
 
-            elapsed = time.time() - start
-            sleep_time = max(0.0, (1.0 / self._fps) - elapsed)
-            time.sleep(sleep_time)
+            self._sleep()
 
         logging.info("Detection loop ended")
         cv2.destroyAllWindows()
 
+    def _sleep(self):
+        """Method used to let other code parts run. Should be called from _run_detection loop."""
+        if self._fps == 0.0:
+            self._fps = self._stream.get_fps()
+            if self._fps != 0.0:
+                self._fps = 1.0 / self._stream.get_fps()
+
+        time.sleep(self._fps / 10.0)
+
     def get_last_results(self) -> list[Results] | None:
+        """Retrieves the first available result."""
         try:
             return self.results_queue.pop()
         except IndexError:
             return None
 
     def is_empty(self) -> bool:
+        """Tells if the results list is empty."""
         return len(self.results_queue) == 0
 
-    def start(self, stream: cv2.VideoCapture, display: bool = True):
+    def start(self, stream: VideoSource, display: bool = True):
         """Start detection in a background thread."""
         if self._thread and self._thread.is_alive():
             logging.warning("Detection already running.")
             return
 
         self._stream = stream
-        self._fps = self._stream.get(cv2.CAP_PROP_FPS)
+        self._fps = self._stream.get_fps()
+        if self._fps != 0.0:
+            self._fps = 1.0 / self._fps
         self._stop_event.clear()
         self._thread = threading.Thread(
             target=self._run_detection, args=(display,), daemon=True
