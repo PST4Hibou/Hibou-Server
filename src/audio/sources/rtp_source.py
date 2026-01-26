@@ -1,15 +1,15 @@
 import logging
 import os
 
-from src.adc_devices.models.adc_device import ADCDevice
 from src.audio.sources.gstreamer_source import GstreamerSource
+from src.devices.audio.dante.models import DanteADCDevice
 from src.settings import SETTINGS
 
 
 class RTPAudioSource(GstreamerSource):
     def __init__(
         self,
-        devices: list[ADCDevice],
+        devices: list[DanteADCDevice],
         enable_recording_saves: bool,
         save_fp: str,
         record_duration: int,
@@ -63,48 +63,51 @@ class RTPAudioSource(GstreamerSource):
         channel = 0
         for dev in self.devices:
             port = dev.port
-            payload = dev.rtp_payload
             ip_address = dev.multicast_ip
+            nb_channels = dev.nb_channels
+            payload = dev.rtp_payload
 
+            appsink_branches = " ".join(
+                f"d.src_{i} ! queue ! appsink name=appsink_{channel + i}"
+                for i in range(nb_channels)
+            )
+
+            # rtpsrc has issues using & figuring out the net stream.
             gst_pipeline_str = (
                 f"udpsrc address={ip_address} port={port} multicast-iface={dev.interface} "
                 f'caps="application/x-rtp, media=(string)audio, clock-rate=(int){dev.clock_rate}, '
-                f'channels=(int)2, encoding-name=(string)L24, payload=(int){payload}" ! '
+                f'channels=(int){nb_channels}, encoding-name=(string)L24, payload=(int){payload}" ! '
                 f"rtpjitterbuffer latency={stream_latency} ! "
                 f"rtpL24depay ! "
                 f"queue ! "
                 f"audioconvert ! "
-                f"volume volume={SETTINGS.AUDIO_VOLUME} !"
+                f"volume volume={SETTINGS.AUDIO_VOLUME} ! "
                 f"audioresample ! "
-                f"audio/x-raw, format=F32LE, channels=(int)2, rate={rec_hz} ! "
+                f"audio/x-raw, format=F32LE, channels=(int){nb_channels}, rate={rec_hz} ! "
                 f"deinterleave name=d "
-                f"d.src_0 ! tee name=t0 "
-                f"d.src_1 ! tee name=t1 "
-                f"t0. ! queue ! appsink name=appsink_{channel} "
-                f"t1. ! queue ! appsink name=appsink_{channel + 1}"
+                f"{appsink_branches} "
             )
 
             logging.debug(gst_pipeline_str)
 
             if enable_recording_saves:
-                os.makedirs(f"{save_fp}/{channel}", exist_ok=True)
-                os.makedirs(f"{save_fp}/{channel + 1}", exist_ok=True)
+                for i in range(nb_channels):
+                    os.makedirs(f"{save_fp}/{i}", exist_ok=True)
 
-                gst_pipeline_str += (
-                    f" t0. ! audioconvert ! audioresample ! "
-                    f"audioresample ! "
-                    f"audio/x-raw, format=F32LE, channels=(int)2, rate={rec_hz} ! "
-                    f'splitmuxsink location="{save_fp}/{channel}/%d.wav" muxer=wavenc '
-                    f"max-size-time={record_duration} "
-                    f"t1. ! audioconvert ! audioresample ! "
-                    f"audio/x-raw, format=F32LE, channels=(int)2, rate={rec_hz} ! "
-                    f"volume volume={SETTINGS.AUDIO_VOLUME} !"
-                    f'splitmuxsink location="{save_fp}/{channel_prefix}{channel + 1}/%d.wav" muxer=wavenc '
-                    f"max-size-time={record_duration}"
+                record_branches = " ".join(
+                    (
+                        f"d.src_{i} ! "
+                        f'splitmuxsink location="{save_fp}/'
+                        f'{channel_prefix}{channel + i}/%d.wav" '
+                        f"muxer=wavenc max-size-time={record_duration}"
+                    )
+                    for i in range(nb_channels)
                 )
 
+                gst_pipeline_str += record_branches
+
             pipeline_strings.append(gst_pipeline_str)
-            channel += 2
+            channel += nb_channels
 
         # Our audios are F32LE, so each "element" is of size 4.
         super().__init__(pipeline_strings, int((rec_hz * record_duration / 1e9) * 4))

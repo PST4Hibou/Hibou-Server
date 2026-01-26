@@ -116,7 +116,7 @@ class FileAudioSource(GstreamerSource):
                 os.makedirs(f"{save_fp}/{channel + 1}", exist_ok=True)
 
                 gst_pipeline_str += (
-                    f'splitmuxsink location="{save_fp}/{channel}/%d.wav" '
+                    f't. ! splitmuxsink location="{save_fp}/{channel_prefix}{channel}/%d.wav" '
                     f"muxer=wavenc max-size-time={record_duration}"
                 )
 

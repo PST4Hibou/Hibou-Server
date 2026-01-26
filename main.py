@@ -1,11 +1,13 @@
 from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram, StftSpectrogram
+from src.devices.camera.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
 from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
+from src.devices.audio.audio_device_controller import ADCControllerManager
 from src.ptz_devices.utils.calibration import start_ptz_calibration
 from src.adc_devices.adc_device_manager import ADCDeviceManager
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
 from src.computer_vision.drone_detection import DroneDetection
+from src.devices.camera.ptz_controller import PTZController
 from src.audio.sources.file_source import FileAudioSource
-from src.ptz_devices.ptz_controller import PTZController
 from src.audio.sources.rtp_source import RTPAudioSource
 from src.tracking.pid_tracker import PIDTracker
 from src.audio.debug.radar import RadarPlot
@@ -19,7 +21,6 @@ from src.audio import Channel
 from src.logger import logger
 from collections import deque
 from time import sleep
-
 
 import numpy as np
 import datetime
@@ -72,14 +73,18 @@ if __name__ == "__main__":
 
     logger.debug(f"Loaded settings: {SETTINGS}")
 
-    devices = (
-        ADCDeviceManager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
-        if args.load_devices_from_file
-        else ADCDeviceManager.auto_discover()
-    )
+    controller_manager = ADCControllerManager()
+    if SETTINGS.DEVICES_CONFIG_PATH:
+        controller_manager.load_devices_from_files(SETTINGS.DEVICES_CONFIG_PATH)
+    else:
+        controller_manager.auto_discover()
+    devices = controller_manager.adc_devices
 
     logging.info(f"{len(devices)} devices loaded...")
     logging.debug(f"Devices: {devices}")
+    for dev in devices:
+        if not dev.is_online():
+            logging.warning(f"{dev.name} is offline")
 
     now = datetime.datetime.now()
     recs_folder_name = os.path.join(
@@ -146,7 +151,9 @@ if __name__ == "__main__":
         ),
     )
 
-    nb_channels = len(devices) * 2
+    nb_channels = sum([x.nb_channels for x in devices])
+    if nb_channels == 0:
+        raise Exception("No ADC devices found! 0 channels available. Exiting.")
     frame_duration_s = SETTINGS.AUDIO_CHUNK_DURATION / 1000
     angle_coverage = SETTINGS.AUDIO_ANGLE_COVERAGE
 

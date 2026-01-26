@@ -1,3 +1,7 @@
+from src.devices.camera.utils.calibration import start_ptz_calibration
+from src.doctor import run_doctor
+from src.settings import SETTINGS
+
 import argparse
 import gi
 
@@ -18,6 +22,9 @@ parser = argparse.ArgumentParser(
 )
 
 parser.add_argument("--rec-duration", help="In milliseconds", type=int)
+parser.add_argument(
+    "--load-devices-from-file", action="store_true", help="Load devices from file"
+)
 parser.add_argument("--infer-from-folder", help="Use a folder to infer", type=str)
 parser.add_argument(
     "--log-level", help="Change log level from ERROR to DEBUG", type=str
@@ -52,3 +59,14 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
+
+if args.rec_duration:
+    SETTINGS.AUDIO_CHUNK_DURATION = int(args.rec_duration) * 10**6
+if args.infer_from_folder:
+    SETTINGS.INFER_FROM_FOLDER = args.infer_from_folder
+if args.log_level:
+    SETTINGS.LOG_LEVEL = args.log_level
+if args.doctor:
+    run_doctor()
+if args.ptz_calibration:
+    start_ptz_calibration()

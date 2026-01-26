@@ -5,6 +5,7 @@
       "model": "DAI2",
       "ipv4": "192.168.250.14",
       "port": 5003,
+      "nb_channels": 2,
       "multicast_ip": "239.69.250.255",
       "rtp_payload": 97,
       "interface": "enp2s0",

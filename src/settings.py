@@ -56,7 +56,7 @@ class Settings:
     AI_DEVICE: str
     AI_SEED: int
 
-    AUDIO_PLAYBACK: bool = False  # Only for debug purposes
+    AUDIO_PLAYBACK: bool = True  # Only for debug purposes
     AUDIO_ENERGY_SPECTRUM: bool = False  # Only for debug purposes
     AUDIO_STFT_SPECTRUM: bool = False  # Only for debug purposes
     AUDIO_RADAR: bool = False  # Only for debug purposes

@@ -26,43 +26,47 @@ def is_multicast_ip(ip: str) -> bool:
         return False
 
 
+def extract_rtp_payload_type(sdp):
+    formats = sdp.media_format.all_fields
+    for format in formats:
+        value = format.show
+        if value.isdigit():
+            return int(value)
+    return None
+
+
 def get_multicast_stream_info(interface: str, source_ip: str) -> Optional[dict]:
     multicast_ip = None
     multicast_port = None
-
-    # Step 1: Detect the first multicast UDP packet from the device
-    for pkt in capture_udp_packets(interface=interface, source_ip=source_ip, limit=50):
-        if not hasattr(pkt, "ip") or not hasattr(pkt, "udp"):
-            continue
-
-        dst_ip = pkt.ip.dst
-        dst_port = int(pkt.udp.dstport)
-
-        if is_multicast_ip(dst_ip):
-            multicast_ip = dst_ip
-            multicast_port = dst_port
-            break
-
-    if not multicast_ip or not multicast_port:
-        return None
-
-    # Step 2: Capture RTP packets dynamically on the detected multicast port
-    decode_as = {f"udp.port=={multicast_port}": "rtp"}
+    rtp_payload = None
+    active_channels = None
 
     for pkt in capture_udp_packets(
         interface=interface,
         source_ip=source_ip,
-        dst_port=multicast_port,
-        decode_as=decode_as,
-        limit=20,
+        dst_port=9875,
+        decode_as={"udp.port==9875": "sap"},
+        limit=1,
     ):
-        if hasattr(pkt, "rtp"):
-            rtp_payload = getattr(pkt.rtp, "p_type", 97)
-            if rtp_payload:
-                return {
-                    "multicast_ip": multicast_ip,
-                    "multicast_port": multicast_port,
-                    "rtp_payload": rtp_payload,
-                }
+        if not hasattr(pkt, "sdp"):
+            continue
 
-    return None
+        sdp = pkt.sdp
+
+        rtp_payload = extract_rtp_payload_type(sdp)
+        multicast_port = int(getattr(sdp, "media_port", 0))
+        active_channels = int(getattr(sdp, "channels", 0))
+        multicast_ip = getattr(sdp, "connection_info_address", None)
+
+    if not is_multicast_ip(multicast_ip):
+        return None
+
+    if not multicast_ip or not multicast_port:
+        return None
+
+    return {
+        "multicast_ip": multicast_ip,
+        "multicast_port": multicast_port,
+        "rtp_payload": rtp_payload,
+        "active_channels": active_channels,
+    }
