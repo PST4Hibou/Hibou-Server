@@ -191,9 +191,6 @@ class ADCControllerManager:
             try:
                 controllers = manager.scan_devices()
                 discovered_controllers.extend(controllers)
-                logging.info(
-                    f"Discovered {len(discovered_controllers)} devices via {manager.__name__}"
-                )
             except Exception as e:
                 logging.exception(
                     f"Failed to auto-discover devices for {manager.__class__.__name__}, {e}",
