@@ -1,9 +1,7 @@
 from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram, StftSpectrogram
 from src.devices.camera.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
-from src.ptz_devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
 from src.devices.audio.audio_device_controller import ADCControllerManager
-from src.ptz_devices.utils.calibration import start_ptz_calibration
-from src.adc_devices.adc_device_manager import ADCDeviceManager
+from src.devices.camera.utils.calibration import start_ptz_calibration
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
 from src.computer_vision.drone_detection import DroneDetection
 from src.devices.camera.ptz_controller import PTZController
@@ -112,9 +110,9 @@ if __name__ == "__main__":
 
     audio = AudioProcess()
     source.set_callback(audio.process)  # Called every SETTING.REC_DURATION
-    drone_detector = DroneDetection(
-        model_type="yolo", model_path="assets/computer_vision_models/best.pt"
-    )
+    # drone_detector = DroneDetection(
+    #     model_type="yolo", model_path="assets/computer_vision_models/best.pt"
+    # )
 
     PTZController(
         "main_camera",
@@ -176,9 +174,10 @@ if __name__ == "__main__":
 
     try:
         source.start()
-        drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
+        stream.start_recording()
+        # drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
         print("Listening started. Press Ctrl+C to stop.")
-        PTZController("main_camera").go_to_angle(phi=30)
+        # PTZController("main_camera").go_to_angle(phi=30)
 
         # Main loop
         while True:
@@ -210,11 +209,11 @@ if __name__ == "__main__":
             if energy_spectrum_plot:
                 energy_spectrum_plot.update()
 
-            results = drone_detector.get_last_results()
-            if results is not None:
-                controls = tracker.update(
-                    results,
-                )
+            # results = drone_detector.get_last_results()
+            # if results is not None:
+            #     controls = tracker.update(
+            #         results,
+            #     )
             #     if controls is not None:
             #         print(controls[0])
             #         phi = PTZController("main_camera")._current_phi_angle
@@ -223,6 +222,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nStopping audio...")
     finally:
-        drone_detector.stop()
+        stream.stop_recording()
+        # drone_detector.stop()
         PTZController.remove("opencv_vendor")
         source.stop()

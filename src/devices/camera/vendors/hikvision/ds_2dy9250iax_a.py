@@ -1,5 +1,5 @@
+from src.devices.camera.vendors.base_vendor import BaseVendor
 from src.computer_vision.rtsp_stream import RtspSource
-from src.ptz_devices.vendors.base_vendor import BaseVendor
 from hikvisionapi import Client
 
 
