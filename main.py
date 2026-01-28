@@ -89,7 +89,7 @@ if __name__ == "__main__":
         SETTINGS.REC_SAVE_FP, f"{now.strftime('%d-%m-%Y_%H:%M:%S')}"
     )
     if args.infer_from_folder:
-        source = FileAudioSource(
+        audio_source = FileAudioSource(
             folder_path=args.infer_from_folder,
             channel_prefix=args.channel_prefix,
             channels_count=args.channel_count,
@@ -98,7 +98,7 @@ if __name__ == "__main__":
             record_duration=SETTINGS.AUDIO_CHUNK_DURATION,
         )
     else:
-        source = RTPAudioSource(
+        audio_source = RTPAudioSource(
             devices=devices,
             enable_recording_saves=SETTINGS.REC_AUDIO_ENABLE,
             save_fp=recs_folder_name,
@@ -109,7 +109,7 @@ if __name__ == "__main__":
         )
 
     audio = AudioProcess()
-    source.set_callback(audio.process)  # Called every SETTING.REC_DURATION
+    audio_source.set_callback(audio.process)  # Called every SETTING.REC_DURATION
     # drone_detector = DroneDetection(
     #     model_type="yolo", model_path="assets/computer_vision_models/best.pt"
     # )
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     radar_plot = RadarPlot() if SETTINGS.AUDIO_RADAR else None
 
     try:
-        source.start()
+        audio_source.start()
         if SETTINGS.REC_VIDEO_ENABLE:
             stream.start_recording(recs_folder_name)
         # drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
@@ -225,4 +225,4 @@ if __name__ == "__main__":
         stream.stop_recording()
         # drone_detector.stop()
         PTZController.remove()
-        source.stop()
+        audio_source.stop()

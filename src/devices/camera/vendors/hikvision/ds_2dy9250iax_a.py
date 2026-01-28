@@ -49,6 +49,7 @@ class DS2DY9250IAXA(BaseVendor):
 
     def __init__(
         self,
+        name: str,
         host: str,
         username: str,
         password: str,
@@ -70,6 +71,7 @@ class DS2DY9250IAXA(BaseVendor):
 
         self._initialized = True  # Flag so __init__ runs only once
 
+        self._name = name
         self._host = host
         self._username = username
         self._password = password
@@ -86,7 +88,7 @@ class DS2DY9250IAXA(BaseVendor):
         self._last_angle_update_time = 0
 
         self.rtsp_url = f"rtsp://{username}:{password}@{host}:{rtsp_port}/Streaming/Channels/10{video_channel}/"
-        self.rtsp_stream = RtspSource(self.rtsp_url)
+        self.rtsp_stream = RtspSource(self.rtsp_url, self._name)
         self.rtsp_stream.start()
 
         if not self.rtsp_stream.is_opened():

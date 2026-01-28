@@ -34,7 +34,7 @@ class PTZController:
         logging.info(
             f"Initializing new PTZ camera '{name}' using {vendor_class.__name__}"
         )
-        ptz_instance = vendor_class(*args, **kwargs)
+        ptz_instance = vendor_class(name, *args, **kwargs)
 
         # Register and return it
         cls._instances[name] = ptz_instance

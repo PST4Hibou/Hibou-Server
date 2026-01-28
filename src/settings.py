@@ -54,9 +54,8 @@ class Settings:
     INFER_FROM_FOLDER: str
     AI_NUM_PROC: int
     AI_DEVICE: str
-    AI_SEED: int
 
-    AUDIO_PLAYBACK: bool = True  # Only for debug purposes
+    AUDIO_PLAYBACK: bool = False  # Only for debug purposes
     AUDIO_ENERGY_SPECTRUM: bool = False  # Only for debug purposes
     AUDIO_STFT_SPECTRUM: bool = False  # Only for debug purposes
     AUDIO_RADAR: bool = False  # Only for debug purposes
@@ -107,7 +106,6 @@ try:
         PTZ_START_AZIMUTH=int(os.getenv("PTZ_START_AZIMUTH")),
         PTZ_END_AZIMUTH=int(os.getenv("PTZ_END_AZIMUTH")),
         AI_NUM_PROC=int(os.getenv("AI_NUM_PROC")),
-        AI_SEED=int(os.getenv("AI_SEED")),
     )
 
 

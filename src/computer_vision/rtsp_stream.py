@@ -31,9 +31,10 @@ class RtspSource(VideoSource, VideoRecorder):
           `start_recording()` and must balance with `stop_recording()`.
     """
 
-    def __init__(self, rtsp_url: str):
+    def __init__(self, rtsp_url: str, camera_name: str):
         super().__init__()
 
+        self._camera_name = camera_name
         self._record_requests: int = 0
         self._app_pipeline: Gst.Pipeline | None = None
         self._rec_pipeline: Gst.Pipeline | None = None
@@ -204,7 +205,7 @@ class RtspSource(VideoSource, VideoRecorder):
         """
 
         if self._record_requests == 0:
-            self._current_recording_file = f"{saving_path}/camera.mp4"
+            self._current_recording_file = f"{saving_path}/{self._camera_name}.mp4"
 
             self._rec_pipeline = self._create_recording_pipeline(
                 self._rtsp_url,  # Note: You need to store rtsp_url in __init__
