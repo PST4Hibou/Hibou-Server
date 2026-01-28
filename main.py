@@ -94,13 +94,13 @@ if __name__ == "__main__":
             channel_prefix=args.channel_prefix,
             channels_count=args.channel_count,
             save_fp=recs_folder_name,
-            enable_recording_saves=SETTINGS.REC_ENABLE,
+            enable_recording_saves=SETTINGS.REC_AUDIO_ENABLE,
             record_duration=SETTINGS.AUDIO_CHUNK_DURATION,
         )
     else:
         source = RTPAudioSource(
             devices=devices,
-            enable_recording_saves=SETTINGS.REC_ENABLE,
+            enable_recording_saves=SETTINGS.REC_AUDIO_ENABLE,
             save_fp=recs_folder_name,
             record_duration=int(SETTINGS.AUDIO_CHUNK_DURATION),
             rec_hz=int(SETTINGS.AUDIO_REC_HZ),
@@ -174,10 +174,10 @@ if __name__ == "__main__":
 
     try:
         source.start()
-        stream.start_recording()
+        if SETTINGS.REC_VIDEO_ENABLE:
+            stream.start_recording(recs_folder_name)
         # drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
         print("Listening started. Press Ctrl+C to stop.")
-        # PTZController("main_camera").go_to_angle(phi=30)
 
         # Main loop
         while True:
@@ -224,5 +224,5 @@ if __name__ == "__main__":
     finally:
         stream.stop_recording()
         # drone_detector.stop()
-        PTZController.remove("opencv_vendor")
+        PTZController.remove("main_camera")
         source.stop()

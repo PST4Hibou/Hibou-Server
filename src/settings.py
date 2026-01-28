@@ -31,7 +31,9 @@ class Settings:
     AUDIO_REC_HZ: int
     AUDIO_VOLUME: int
 
-    REC_ENABLE: bool
+    REC_AUDIO_ENABLE: bool
+    REC_VIDEO_ENABLE: bool
+    REC_VIDEO_ON_DETECTION: bool
     REC_SAVE_FP: str
 
     DEVICES_CONFIG_PATH: str
@@ -48,8 +50,6 @@ class Settings:
     PTZ_RTSP_PORT: int
     PTZ_START_AZIMUTH: int
     PTZ_END_AZIMUTH: int
-
-    VIDEO_SAVE_FP: str
 
     INFER_FROM_FOLDER: str
     AI_NUM_PROC: int
@@ -83,7 +83,9 @@ try:
         Settings.CV_VIDEO_PLAYBACK = False
 
     SETTINGS = Settings(
-        REC_ENABLE=parse_bool(os.getenv("REC_ENABLE")),
+        REC_AUDIO_ENABLE=parse_bool(os.getenv("REC_AUDIO_ENABLE")),
+        REC_VIDEO_ENABLE=parse_bool(os.getenv("REC_VIDEO_ENABLE")),
+        REC_VIDEO_ON_DETECTION=parse_bool(os.getenv("REC_VIDEO_ENABLE")),
         REC_SAVE_FP=os.getenv("REC_SAVE_FP"),
         AUDIO_CHUNK_DURATION=int(os.getenv("AUDIO_CHUNK_DURATION")) * 10**6,  # ns
         AUDIO_REC_HZ=int(os.getenv("AUDIO_REC_HZ")),
@@ -106,7 +108,6 @@ try:
         PTZ_END_AZIMUTH=int(os.getenv("PTZ_END_AZIMUTH")),
         AI_NUM_PROC=int(os.getenv("AI_NUM_PROC")),
         AI_SEED=int(os.getenv("AI_SEED")),
-        VIDEO_SAVE_FP=os.getenv("VIDEO_SAVE_FP"),
     )
 
 

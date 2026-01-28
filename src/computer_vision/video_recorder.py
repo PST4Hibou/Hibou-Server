@@ -12,7 +12,7 @@ class VideoRecorder(abc.ABC):
     """
 
     @abstractmethod
-    def start_recording(self) -> None:
+    def start_recording(self, saving_path: str) -> None:
         """Start the video recording process."""
         pass
 

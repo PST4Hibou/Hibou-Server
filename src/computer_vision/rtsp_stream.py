@@ -49,9 +49,6 @@ class RtspSource(VideoSource, VideoRecorder):
         if not Gst.init_check(None):
             raise RuntimeError("Could not initialize GStreamer")
 
-        # Create dir if missing
-        Path(SETTINGS.VIDEO_SAVE_FP).mkdir(parents=True, exist_ok=True)
-
         try:
             self._create_pipeline(
                 (
@@ -198,17 +195,16 @@ class RtspSource(VideoSource, VideoRecorder):
         self._plays = False
 
     @override
-    def start_recording(self) -> None:
+    def start_recording(self, saving_path: str) -> None:
         """Begin recording the incoming stream to disk.
 
         This method is reference-counted: the first caller will create a new
         recording fragment and open the recorder. Callers must match with
         ``stop_recording()`` to actually stop the recording.
         """
+
         if self._record_requests == 0:
-            self._current_recording_file = (
-                f"{SETTINGS.VIDEO_SAVE_FP}/{time.strftime("%Y%m%d-%H%M%S")}.mp4"
-            )
+            self._current_recording_file = f"{saving_path}/camera.mp4"
 
             self._rec_pipeline = self._create_recording_pipeline(
                 self._rtsp_url,  # Note: You need to store rtsp_url in __init__
