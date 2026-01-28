@@ -53,11 +53,23 @@ class PTZController:
         return list(cls._instances.keys())
 
     @classmethod
-    def remove(cls, name: str) -> None:
-        """Unregister and release a PTZ camera."""
-        if name in cls._instances:
-            ptz = cls._instances[name]
+    def remove(cls, name: str | None = None) -> None:
+        """Unregister and release one or all PTZ cameras."""
+
+        def _release(camera_name: str) -> None:
+            ptz = cls._instances.pop(camera_name, None)
+            if not ptz:
+                logging.warning(f"Camera '{camera_name}' not found.")
+                return
+
             if hasattr(ptz, "release_stream"):
                 ptz.release_stream()
-            del cls._instances[name]
-            logging.info(f"Camera '{name}' released and unregistered.")
+
+            logging.info(f"Camera '{camera_name}' released and unregistered.")
+
+        # Remove all cameras
+        if name is None:
+            for camera_name in list(cls._instances.keys()):
+                _release(camera_name)
+        else:
+            _release(name)

@@ -224,5 +224,5 @@ if __name__ == "__main__":
     finally:
         stream.stop_recording()
         # drone_detector.stop()
-        PTZController.remove("main_camera")
+        PTZController.remove()
         source.stop()
