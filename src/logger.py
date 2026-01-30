@@ -14,7 +14,6 @@ logging.config.fileConfig(
 )
 
 root_logger = logging.getLogger()
-root_logger.setLevel(SETTINGS.LOG_LEVEL)
 
 # Default format if nothing found
 fmt = "%(asctime)s %(levelname)s %(name)s %(message)s"
@@ -27,7 +26,6 @@ for handler in root_logger.handlers:
         root_logger.removeHandler(handler)
 
 ch = logging.StreamHandler()
-ch.setLevel(SETTINGS.LOG_LEVEL)
 
 formatter = colorlog.ColoredFormatter(
     "%(log_color)s" + fmt,
@@ -61,3 +59,11 @@ logging.getLogger("charset_normalizer").setLevel(logging.CRITICAL)
 logging.getLogger("fsspec.http").setLevel(logging.CRITICAL)
 logging.getLogger("httpx").setLevel(logging.CRITICAL)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
+
+
+def update_log_level():
+    ch.setLevel(SETTINGS.LOG_LEVEL)
+
+
+def update_global_log_level():
+    root_logger.setLevel(SETTINGS.LOG_LEVEL)

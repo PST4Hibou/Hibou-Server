@@ -2,6 +2,7 @@ from src.audio.debug.channel_spectrogram import ChannelTimeSpectrogram, StftSpec
 from src.devices.camera.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
 from src.devices.audio.audio_device_controller import ADCControllerManager
 from src.devices.camera.utils.calibration import start_ptz_calibration
+from src.logger import update_log_level, update_global_log_level
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
 from src.computer_vision.drone_detection import DroneDetection
 from src.devices.camera.ptz_controller import PTZController
@@ -33,6 +34,8 @@ def apply_arguments():
         SETTINGS.INFER_FROM_FOLDER = args.infer_from_folder
     if args.log_level:
         SETTINGS.LOG_LEVEL = args.log_level
+        update_log_level()
+        update_global_log_level()
     if args.doctor:
         run_doctor()
     if args.ptz_calibration:

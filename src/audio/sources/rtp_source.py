@@ -67,8 +67,8 @@ class RTPAudioSource(GstreamerSource):
             nb_channels = dev.nb_channels
             payload = dev.rtp_payload
 
-            appsink_branches = " ".join(
-                f"d.src_{i} ! queue ! appsink name=appsink_{channel + i}"
+            branches = " ".join(
+                f"d.src_{i} ! tee name=t{i} t{i}. ! queue ! appsink name=appsink_{channel + i}"
                 for i in range(nb_channels)
             )
 
@@ -85,10 +85,8 @@ class RTPAudioSource(GstreamerSource):
                 f"audioresample ! "
                 f"audio/x-raw, format=F32LE, channels=(int){nb_channels}, rate={rec_hz} ! "
                 f"deinterleave name=d "
-                f"{appsink_branches} "
+                f"{branches} "
             )
-
-            logging.debug(gst_pipeline_str)
 
             if enable_recording_saves:
                 for i in range(nb_channels):
@@ -96,7 +94,7 @@ class RTPAudioSource(GstreamerSource):
 
                 record_branches = " ".join(
                     (
-                        f"d.src_{i} ! "
+                        f"t{i}. ! "
                         f'splitmuxsink location="{save_fp}/'
                         f'{channel_prefix}{channel + i}/%d.wav" '
                         f"muxer=wavenc max-size-time={record_duration}"
@@ -105,6 +103,8 @@ class RTPAudioSource(GstreamerSource):
                 )
 
                 gst_pipeline_str += record_branches
+
+            logging.debug(gst_pipeline_str)
 
             pipeline_strings.append(gst_pipeline_str)
             channel += nb_channels

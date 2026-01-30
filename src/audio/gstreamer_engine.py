@@ -11,8 +11,9 @@ class GStreamerEngine:
         # see https://gstreamer.freedesktop.org/documentation/tutorials/basic/debugging-tools.html
         Gst.debug_set_default_threshold(args.gst_dbg_level)
 
-        if not Gst.init_check(None):
-            raise RuntimeError("Could not initialize GStreamer")
+        if not Gst.is_initialized():
+            if not Gst.init_check(None):
+                raise RuntimeError("Could not initialize GStreamer")
 
         self._pipelines = []
         self._on_sample = on_sample

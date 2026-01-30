@@ -47,8 +47,9 @@ class RtspSource(VideoSource, VideoRecorder):
 
         # Setting GST's logging level to output.
         Gst.debug_set_default_threshold(args.gst_dbg_level)
-        if not Gst.init_check(None):
-            raise RuntimeError("Could not initialize GStreamer")
+        if not Gst.is_initialized():
+            if not Gst.init_check(None):
+                raise RuntimeError("Could not initialize GStreamer")
 
         try:
             self._create_pipeline(
