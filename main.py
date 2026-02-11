@@ -110,9 +110,10 @@ if __name__ == "__main__":
 
     audio = AudioProcess()
     audio_source.set_callback(audio.process)  # Called every SETTING.REC_DURATION
-    # drone_detector = DroneDetection(
-    #     model_type="yolo", model_path="assets/computer_vision_models/best.pt"
-    # )
+    drone_detector = DroneDetection(
+        model_type="yolo",
+        model_path="assets/computer_vision_models/yolo11n_drone.pt",
+    )
 
     PTZController(
         "main_camera",
@@ -134,18 +135,18 @@ if __name__ == "__main__":
 
     tracker = PIDTracker(
         yaw_pid_coefs=PIDTracker.PidCoefs(
-            kp=4,
+            kp=30,
             ki=0.0,
             kd=0.3,
-            setpoint=0.0,
-            output_limits=(-5, 5),
+            setpoint=0,
+            output_limits=(-20, 20),
         ),
         pitch_pid_coefs=PIDTracker.PidCoefs(
-            kp=0.5,
-            ki=0.1,
-            kd=0.05,
-            setpoint=0.0,
-            output_limits=(-2, 2),
+            kp=30,
+            ki=0.0,
+            kd=0.03,
+            setpoint=0,
+            output_limits=(-5, 5),
         ),
     )
 
@@ -176,8 +177,10 @@ if __name__ == "__main__":
         audio_source.start()
         if SETTINGS.REC_VIDEO_ENABLE:
             stream.start_recording(recs_folder_name)
-        # drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
+        drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
         print("Listening started. Press Ctrl+C to stop.")
+
+        PTZController("main_camera").go_to_angle(phi=20, theta=20)
 
         # Main loop
         while True:
@@ -209,20 +212,32 @@ if __name__ == "__main__":
             if energy_spectrum_plot:
                 energy_spectrum_plot.update()
 
-            # results = drone_detector.get_last_results()
-            # if results is not None:
-            #     controls = tracker.update(
-            #         results,
-            #     )
-            #     if controls is not None:
-            #         print(controls[0])
-            #         phi = PTZController("main_camera")._current_phi_angle
-            #         PTZController("main_camera").go_to_angle(phi=phi + controls[0])
+            results = drone_detector.get_last_results()
+
+            if results is not None:
+                for result in results:
+                    if result is None:
+                        continue
+                    if not "drone" in result.names.values():
+                        continue
+
+                    boxes = result.boxes
+                    for box, cls_id, conf in zip(boxes.xyxyn, boxes.cls, boxes.conf):
+                        class_id = int(cls_id.item())
+                        if class_id != 0:  # Skip if not a drone
+                            continue
+                        x1, y1, x2, y2 = box
+
+                        controls = tracker.update(box)
+
+                        PTZController("main_camera").set_relative_angles(
+                            phi=controls[0], theta=-controls[1]
+                        )
 
     except KeyboardInterrupt:
         print("\nStopping audio...")
     finally:
         stream.stop_recording()
-        # drone_detector.stop()
+        drone_detector.stop()
         PTZController.remove()
         audio_source.stop()

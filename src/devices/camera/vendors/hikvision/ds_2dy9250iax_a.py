@@ -1,8 +1,11 @@
+from sympy.diffgeom.rn import theta
+
 from src.devices.camera.vendors.base_vendor import BaseVendor
 from src.computer_vision.rtsp_stream import RtspSource
 from hikvisionapi import Client
 
 
+import numpy as np
 import threading
 import logging
 import math
@@ -24,6 +27,12 @@ class DS2DY9250IAXA(BaseVendor):
     MAX_SPEED = 7
     SPEED_MULTIPLIER = 15
 
+    PTZ_MIN_ZOOM = 10
+    PTZ_MAX_ZOOM = 67
+
+    SOFT_MIN_ZOOM = 1
+    SOFT_MAX_ZOOM = 20
+
     # Valid axes for movement
     VALID_AXES = {"X", "Y", "XY"}
     DEFAULT_AXIS = "XY"
@@ -35,7 +44,7 @@ class DS2DY9250IAXA(BaseVendor):
     XML_CONTENT_TYPE = "application/xml"
 
     # Angle tolerance for movement
-    ANGLE_TOLERANCE = 1.5
+    ANGLE_TOLERANCE = 1.2
 
     MIN_INTERVAL = 1
 
@@ -81,7 +90,7 @@ class DS2DY9250IAXA(BaseVendor):
 
         self._current_elevation = 0
         self._current_azimuth = 0
-        self._current_zoom = 0
+        self._current_zoom = 1
         self._current_phi_angle = -50
         self._current_theta_angle = -50
         self._status: dict | None = None
@@ -146,8 +155,46 @@ class DS2DY9250IAXA(BaseVendor):
         """Build XML command for continuous movement."""
         return f"<PTZData><pan>{pan}</pan><tilt>{tilt}</tilt></PTZData>"
 
+    @staticmethod
+    def _build_3d_position(start_x: int, start_y: int, end_x: int, end_y: int) -> str:
+        return f"""
+        <position3D>
+            <StartPoint>
+                <positionX>{start_x}</positionX>
+                <positionY>{start_y}</positionY>
+            </StartPoint>
+            <EndPoint>
+                <positionX>{end_x}</positionX>
+                <positionY>{end_y}</positionY>
+            </EndPoint>
+        </position3D>
+        """.strip()
+
+    def _ui_zoom_to_camera_zoom(self, ui_zoom: int) -> int:
+        """Convert zoom value from UI to camera zoom value."""
+        ui_zoom = np.clip(ui_zoom, self.SOFT_MIN_ZOOM, self.SOFT_MAX_ZOOM)
+
+        camera_zoom = (ui_zoom - self.SOFT_MIN_ZOOM) * (
+            self.PTZ_MAX_ZOOM - self.PTZ_MIN_ZOOM
+        ) / (self.SOFT_MAX_ZOOM - self.SOFT_MIN_ZOOM) + self.PTZ_MIN_ZOOM
+
+        return int(round(camera_zoom))
+
+    def _camera_zoom_to_ui_zoom(self, camera_zoom: int) -> int:
+        """Convert zoom value from camera to UI zoom value."""
+        camera_zoom = np.clip(camera_zoom, self.PTZ_MIN_ZOOM, self.PTZ_MAX_ZOOM)
+
+        ui_zoom = (camera_zoom - self.PTZ_MIN_ZOOM) * (
+            self.SOFT_MAX_ZOOM - self.SOFT_MIN_ZOOM
+        ) / (self.PTZ_MAX_ZOOM - self.PTZ_MIN_ZOOM) + self.SOFT_MIN_ZOOM
+
+        return int(round(ui_zoom))
+
     def set_absolute_ptz_position(
-        self, elevation: float, azimuth: float, zoom: float
+        self,
+        elevation: float | None = None,
+        azimuth: float | None = None,
+        zoom: int | None = None,
     ) -> bool:
         """
         Move the camera to an absolute PTZ position.
@@ -155,7 +202,16 @@ class DS2DY9250IAXA(BaseVendor):
         if not self._ensure_client_initialized():
             return False
 
-        xml_command = self._build_absolute_position_xml(elevation, azimuth, zoom)
+        if elevation is None:
+            elevation = self._current_elevation
+        if azimuth is None:
+            azimuth = self._current_azimuth
+        if zoom is None:
+            zoom = self._current_zoom
+
+        xml_command = self._build_absolute_position_xml(
+            elevation, azimuth, self._ui_zoom_to_camera_zoom(zoom)
+        )
 
         try:
             self._client.PTZCtrl.channels[self.CHANNEL_ID].absolute(
@@ -221,6 +277,25 @@ class DS2DY9250IAXA(BaseVendor):
             )
             return self.DEFAULT_AXIS
         return normalized_axis
+
+    def set_3d_position(self, start_x, start_y, end_x, end_y) -> bool:
+        if not self._ensure_client_initialized():
+            return False
+
+        xml_command = self._build_3d_position(start_x, start_y, end_x, end_y)
+
+        try:
+            self._client.PTZCtrl.channels[self.CHANNEL_ID].position3D(
+                method="put",
+                data=xml_command,
+                headers={"Content-Type": self.XML_CONTENT_TYPE},
+            )
+
+            return True
+
+        except Exception as e:
+            logging.error(f"Error sending PTZ continuous command: {e}")
+            return False
 
     @staticmethod
     def _calculate_pan_tilt(
@@ -371,6 +446,16 @@ class DS2DY9250IAXA(BaseVendor):
             + self._start_azimuth
         )
 
+    def get_angles(self) -> tuple[float, float]:
+        return self._current_phi_angle, self._current_theta_angle
+
+    def set_relative_angles(self, phi: float = None, theta: float = None):
+        if phi is None and theta is None:
+            return
+        phi = None if phi is None else phi + self._current_phi_angle
+        theta = None if theta is None else theta + self._current_theta_angle
+        self.go_to_angle(phi, theta)
+
     def go_to_angle(self, phi: float = None, theta: float = None) -> bool:
         """
         Converts a logical angle into azimuth range and moves the camera.
@@ -378,7 +463,7 @@ class DS2DY9250IAXA(BaseVendor):
         - The change in angle exceeds the tolerance, AND
         - At least MIN_INTERVAL seconds have passed since the previous update.
         """
-        if not self._initialized:
+        if not self._ensure_client_initialized():
             return False
 
         if phi is None and theta is None:
@@ -409,8 +494,9 @@ class DS2DY9250IAXA(BaseVendor):
         self._current_theta_angle = target_theta
 
         azimuth = self._angle_to_azimuth(target_phi)
-        elevation = target_theta  # TODO: Find correct map.
+        elevation = int(target_theta * 10)
 
+        print(f"Going to azimuth: {azimuth}, elevation: {elevation}")
         return self.set_absolute_ptz_position(elevation, azimuth, self._current_zoom)
 
     def release_stream(self):

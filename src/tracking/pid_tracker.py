@@ -1,9 +1,8 @@
 from __future__ import annotations
-import dataclasses
-import math
-from simple_pid import PID
-from ultralytics.engine.results import Results
 from src.tracking.base_tracker import BaseTracker
+from simple_pid import PID
+
+import dataclasses
 
 
 class PIDTracker(BaseTracker):
@@ -33,6 +32,7 @@ class PIDTracker(BaseTracker):
             yaw_pid_coefs.kd,
             setpoint=yaw_pid_coefs.setpoint,
             output_limits=yaw_pid_coefs.output_limits,
+            sample_time=0.2,
         )
         self.pitch_pid = PID(
             pitch_pid_coefs.kp,
@@ -40,54 +40,40 @@ class PIDTracker(BaseTracker):
             pitch_pid_coefs.kd,
             setpoint=pitch_pid_coefs.setpoint,
             output_limits=pitch_pid_coefs.output_limits,
+            sample_time=0.6,
         )
 
     @staticmethod
-    def calculate_min_distance_from_center(result: Results):
+    def calculate_distance_from_center(boxn: list[float]) -> tuple[float, float]:
         """
-        Calculate the minimum distance from the center between all the boxes detected for an object
+        Calculate  offset of the box center from the image center.
+        The output range is [-0.5, 0.5].
         """
-        img_h, img_w = result.orig_img.shape[:2]
-        frame_center_x = img_w / 2
-        frame_center_y = img_h / 2
 
-        min_dx, min_dy = float("inf"), float("inf")
+        # Frame center for normalized coordinates
+        frame_center_x = 0.5
+        frame_center_y = 0.5
 
-        for x1, y1, x2, y2 in result.boxes.xyxy.tolist():
-            box_center_x = (x1 + x2) / 2
-            box_center_y = (y1 + y2) / 2
+        x1, y1, x2, y2 = boxn
 
-            dx = frame_center_x - box_center_x
-            dy = frame_center_y - box_center_y
+        # Box center
+        box_center_x = (x1 + x2) / 2
+        box_center_y = (y1 + y2) / 2
 
-            dx = (frame_center_x - box_center_x) / frame_center_x  # range [-1, 1]
-            dy = (frame_center_y - box_center_y) / frame_center_y
+        dx = frame_center_x - box_center_x
+        dy = frame_center_y - box_center_y
 
-            # You want the box closest to center => compare using abs()
-            if abs(dx) < abs(min_dx):
-                min_dx = dx
-            if abs(dy) < abs(min_dy):
-                min_dy = dy
+        return dx, dy
 
-        return min_dx, min_dy
-
-    def update(self, results: list[Results] | None) -> tuple[float, float] | None:
-        """
-        Update the tracker state based on new detection results.
-
-        :param results: Detection results from the object detection model
-        """
-        if results is None:
+    def update(self, boxn: list[float]) -> tuple[float, float] | None:
+        if boxn is None:
             return None
 
-        min_dx, min_dy = math.inf, math.inf
-        for result in results:
-            dx, dy = self.calculate_min_distance_from_center(result)
+        dx, dy = self.calculate_distance_from_center(boxn)
 
-            min_dx = min(min_dx, dx)
-            min_dy = min(min_dy, dy)
+        # print(f"dx: {dx:.2f}, dy: {dy:.2f}")
 
-        yaw_angle = self.yaw_pid(min_dx)
-        pitch_angle = self.pitch_pid(min_dy)
+        yaw_angle = self.yaw_pid(dx)
+        pitch_angle = self.pitch_pid(dy)
 
         return yaw_angle, pitch_angle

@@ -12,6 +12,6 @@ class BaseTracker(abc.ABC):
     """
 
     @abstractmethod
-    def update(self, results) -> tuple[float, float] | None:
+    def update(self, box: list[float]) -> tuple[float, float] | None:
         """Update the tracker state based on new detection results."""
         pass

@@ -13,12 +13,18 @@ class BaseVendor(abc.ABC):
     """
 
     def set_absolute_ptz_position(
-        self, elevation: float, azimuth: float, zoom: float
+        self,
+        elevation: float | None = None,
+        azimuth: float | None = None,
+        zoom: int | None = None,
     ) -> bool:
         """Move the camera to an absolute PTZ position."""
         raise NotImplementedError(
             "This vendor does not implement absolute PTZ positioning."
         )
+
+    def set_relative_angles(self, phi: float = None, theta: float = None):
+        raise NotImplementedError("This vendor does not implement relative angles.")
 
     def start_continuous(
         self,
@@ -37,6 +43,12 @@ class BaseVendor(abc.ABC):
         raise NotImplementedError(
             "This vendor does not implement stopping continuous PTZ motion."
         )
+
+    def set_3d_position(self, start_x, start_y, end_x, end_y) -> bool:
+        raise NotImplementedError("This vendor does not implement 3D positioning.")
+
+    def get_angles(self) -> tuple[float, float]:
+        raise NotImplementedError("This vendor does not .")
 
     def get_status(self, force_update: bool = False) -> dict:
         """Return the current PTZ camera status."""
