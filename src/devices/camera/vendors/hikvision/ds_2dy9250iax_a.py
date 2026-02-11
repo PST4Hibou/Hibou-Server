@@ -496,7 +496,6 @@ class DS2DY9250IAXA(BaseVendor):
         azimuth = self._angle_to_azimuth(target_phi)
         elevation = int(target_theta * 10)
 
-        print(f"Going to azimuth: {azimuth}, elevation: {elevation}")
         return self.set_absolute_ptz_position(elevation, azimuth, self._current_zoom)
 
     def release_stream(self):

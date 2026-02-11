@@ -51,10 +51,10 @@ class AudioProcess:
         self.audio_queue.append(audio_samples)
 
         res = self.model.infer(audio_samples)
-        if np.any(res):
-            print(f"DRONE: {res}")
-        else:
-            print(f"NONE: {res}")
+        # if np.any(res):
+        #     print(f"DRONE: {res}")
+        # else:
+        #     print(f"NONE: {res}")
 
         if SETTINGS.AUDIO_PLAYBACK:  # Only for debug purposes
             play_sample(audio_samples, 0)
