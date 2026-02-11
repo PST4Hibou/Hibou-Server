@@ -1,4 +1,6 @@
 from ultralytics import YOLO
+from pathlib import Path
+
 import logging
 import torch
 
@@ -6,7 +8,7 @@ import torch
 class YOLOModel:
     """General YOLO model wrapper for v8, v11, etc."""
 
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: Path):
         try:
             self.model = YOLO(model_path)
             logging.info(f"✅ Loaded YOLO model: {model_path}")

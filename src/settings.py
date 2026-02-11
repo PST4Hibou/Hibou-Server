@@ -54,6 +54,9 @@ class Settings:
     INFER_FROM_FOLDER: str
     AI_NUM_PROC: int
     AI_DEVICE: str
+    AI_CV_MODEL: str
+    AI_CV_MODEL_TYPE: str
+    AI_CV_ENABLE: bool
 
     AUDIO_PLAYBACK: bool = False  # Only for debug purposes
     AUDIO_ENERGY_SPECTRUM: bool = False  # Only for debug purposes
@@ -106,6 +109,9 @@ try:
         PTZ_START_AZIMUTH=int(os.getenv("PTZ_START_AZIMUTH")),
         PTZ_END_AZIMUTH=int(os.getenv("PTZ_END_AZIMUTH")),
         AI_NUM_PROC=int(os.getenv("AI_NUM_PROC")),
+        AI_CV_MODEL=os.getenv("AI_CV_MODEL"),
+        AI_CV_MODEL_TYPE=os.getenv("AI_CV_MODEL_TYPE"),
+        AI_CV_ENABLE=parse_bool(os.getenv("AI_CV_ENABLE")),
     )
 
 

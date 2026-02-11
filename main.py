@@ -19,9 +19,9 @@ from src.arguments import args
 from src.audio import Channel
 from src.logger import logger
 from collections import deque
+from pathlib import Path
 from time import sleep
 
-import numpy as np
 import datetime
 import logging
 import os
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         controller_manager.auto_discover()
     devices = controller_manager.adc_devices
 
-    logging.info(f"{len(devices)} devices loaded...")
+    logging.info(f"{len(devices)} devices loaded")
     logging.debug(f"Devices: {devices}")
     for dev in devices:
         if not dev.is_online():
@@ -114,8 +114,9 @@ if __name__ == "__main__":
     audio = AudioProcess()
     audio_source.set_callback(audio.process)  # Called every SETTING.REC_DURATION
     drone_detector = DroneDetection(
-        model_type="yolo",
-        model_path="assets/computer_vision_models/yolo11n_drone.pt",
+        enable=SETTINGS.AI_CV_ENABLE,
+        model_type=SETTINGS.AI_CV_MODEL_TYPE,
+        model_path=Path("assets/computer_vision_models/", SETTINGS.AI_CV_MODEL),
     )
 
     PTZController(

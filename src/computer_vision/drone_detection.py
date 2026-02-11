@@ -1,21 +1,30 @@
-import time
-
 from src.computer_vision.video_source import VideoSource
 from ultralytics.engine.results import Results
 from .models.yolo_model import YOLOModel
 from .utils import draw_detections
 from collections import deque
+from pathlib import Path
 
 import threading
 import logging
+import time
 import cv2
 
 
 class DroneDetection:
     """Handles drone detection using a YOLOv8 model with optional background threading."""
 
-    def __init__(self, model_type: str = "yolo", model_path: str = "yolov8n.pt"):
+    def __init__(
+        self,
+        model_type: str = "yolo",
+        model_path: Path = "yolov8n.pt",
+        enable: bool = True,
+    ):
+        if not enable:
+            logging.warning("Drone detection disabled.")
+            return
         self.model = YOLOModel(model_path)
+        self.channels = self.model.model.yaml.get("channels")
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self._stream: VideoSource | None = None
@@ -40,6 +49,8 @@ class DroneDetection:
                 continue
 
             # FASTEST WAY — YOLO predict()
+            if self.channels == 1:
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
             results = self.model.predict(frame)
 
             # If it contains drones
@@ -48,15 +59,15 @@ class DroneDetection:
                 frame = draw_detections(frame, results)
 
             if display:
-                display_frame = cv2.resize(
-                    frame,
-                    dsize=(
-                        frame.shape[1] // 2,
-                        frame.shape[0] // 2,
-                    ),
-                    interpolation=cv2.INTER_AREA,
-                )
-                cv2.imshow("Drone Detection", display_frame)
+                # display_frame = cv2.resize(
+                #     frame,
+                #     dsize=(
+                #         frame.shape[1] // 2,
+                #         frame.shape[0] // 2,
+                #     ),
+                #     interpolation=cv2.INTER_AREA,
+                # )
+                cv2.imshow("Drone Detection", frame)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     self.stop()
                     break
@@ -88,6 +99,8 @@ class DroneDetection:
 
     def start(self, stream: VideoSource, display: bool = True):
         """Start detection in a background thread."""
+        if not self.model:
+            return
         if self._thread and self._thread.is_alive():
             logging.warning("Detection already running.")
             return
