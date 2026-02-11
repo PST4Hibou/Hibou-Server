@@ -216,4 +216,4 @@ assets/computer_vision_models/yolov8n.pt
 *.wav
 *.pt
 runs
-test.py
+*test*
