@@ -6,6 +6,7 @@ from src.logger import update_log_level, update_global_log_level
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
 from src.computer_vision.drone_detection import DroneDetection
 from src.devices.camera.ptz_controller import PTZController
+from src.tracking.utils.pid_tuning import start_pid_tuning
 from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
 from src.tracking.pid_tracker import PIDTracker
@@ -40,6 +41,8 @@ def apply_arguments():
         run_doctor()
     if args.ptz_calibration:
         start_ptz_calibration()
+    if args.pid_tuning:
+        start_pid_tuning()
 
 
 class AudioProcess:
@@ -139,18 +142,21 @@ if __name__ == "__main__":
 
     tracker = PIDTracker(
         yaw_pid_coefs=PIDTracker.PidCoefs(
-            kp=30,
+            kp=10,
             ki=0.0,
             kd=0.3,
             setpoint=0,
-            output_limits=(-20, 20),
+            output_limits=(-5, 5),
         ),
         pitch_pid_coefs=PIDTracker.PidCoefs(
-            kp=30,
+            kp=10,
             ki=0.0,
             kd=0.03,
             setpoint=0,
             output_limits=(-5, 5),
+        ),
+        zoom_pid=PIDTracker.PidCoefs(
+            kp=5, ki=0.0, kd=0.5, setpoint=0.2, output_limits=(-10, 3)
         ),
     )
 
@@ -184,7 +190,8 @@ if __name__ == "__main__":
         drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
         print("Listening started. Press Ctrl+C to stop.")
 
-        PTZController("main_camera").go_to_angle(phi=20, theta=20)
+        PTZController("main_camera").set_absolute_ptz_position(zoom=0)
+        PTZController("main_camera").go_to_angle(phi=10, theta=20)
 
         # Main loop
         while True:
@@ -237,6 +244,17 @@ if __name__ == "__main__":
                         PTZController("main_camera").set_relative_angles(
                             phi=controls[0], theta=-controls[1]
                         )
+
+                        box_center_x = (x1 + x2) / 2
+                        box_center_y = (y1 + y2) / 2
+
+                        if (
+                            abs(0.5 - box_center_x) < 0.1
+                            and abs(0.5 - box_center_y) < 0.1
+                        ):
+                            PTZController("main_camera").set_relative_ptz_position(
+                                zoom=int(controls[2])
+                            )
 
     except KeyboardInterrupt:
         print("\nStopping audio...")

@@ -22,6 +22,7 @@ class PIDTracker(BaseTracker):
         self,
         yaw_pid_coefs: PIDTracker.PidCoefs,
         pitch_pid_coefs: PIDTracker.PidCoefs,
+        zoom_pid: PIDTracker.PidCoefs,
     ):
         """
         Initialize the PID tracker with specified gains and parameters.
@@ -32,7 +33,7 @@ class PIDTracker(BaseTracker):
             yaw_pid_coefs.kd,
             setpoint=yaw_pid_coefs.setpoint,
             output_limits=yaw_pid_coefs.output_limits,
-            sample_time=0.2,
+            sample_time=0.6,
         )
         self.pitch_pid = PID(
             pitch_pid_coefs.kp,
@@ -41,6 +42,15 @@ class PIDTracker(BaseTracker):
             setpoint=pitch_pid_coefs.setpoint,
             output_limits=pitch_pid_coefs.output_limits,
             sample_time=0.6,
+        )
+
+        self.zoom_pid = PID(
+            zoom_pid.kp,
+            zoom_pid.ki,
+            zoom_pid.kd,
+            setpoint=zoom_pid.setpoint,
+            output_limits=zoom_pid.output_limits,
+            sample_time=1,
         )
 
     @staticmethod
@@ -65,15 +75,18 @@ class PIDTracker(BaseTracker):
 
         return dx, dy
 
-    def update(self, boxn: list[float]) -> tuple[float, float] | None:
+    def update(self, boxn: list[float]) -> tuple[float, float, float] | None:
         if boxn is None:
             return None
 
+        # PTZ orientation
         dx, dy = self.calculate_distance_from_center(boxn)
-
-        # print(f"dx: {dx:.2f}, dy: {dy:.2f}")
 
         yaw_angle = self.yaw_pid(dx)
         pitch_angle = self.pitch_pid(dy)
 
-        return yaw_angle, pitch_angle
+        # Zoom level
+        zoom_level = self.zoom_pid(boxn[2] - boxn[0])
+        print(boxn[2] - boxn[0])
+
+        return yaw_angle, pitch_angle, zoom_level

@@ -44,7 +44,7 @@ class DS2DY9250IAXA(BaseVendor):
     XML_CONTENT_TYPE = "application/xml"
 
     # Angle tolerance for movement
-    ANGLE_TOLERANCE = 1.2
+    ANGLE_TOLERANCE = 1.0
 
     MIN_INTERVAL = 1
 
@@ -189,6 +189,28 @@ class DS2DY9250IAXA(BaseVendor):
         ) / (self.PTZ_MAX_ZOOM - self.PTZ_MIN_ZOOM) + self.SOFT_MIN_ZOOM
 
         return int(round(ui_zoom))
+
+    def set_relative_ptz_position(
+        self,
+        elevation: float | None = None,
+        azimuth: float | None = None,
+        zoom: int | None = None,
+    ) -> bool:
+        if not self._ensure_client_initialized():
+            return False
+        elevation = (
+            self._current_elevation + elevation
+            if elevation is not None
+            else self._current_elevation
+        )
+        azimuth = (
+            self._current_azimuth + azimuth
+            if azimuth is not None
+            else self._current_azimuth
+        )
+        zoom = self._current_zoom + zoom if zoom is not None else self._current_zoom
+
+        return self.set_absolute_ptz_position(elevation, azimuth, zoom)
 
     def set_absolute_ptz_position(
         self,
@@ -420,6 +442,8 @@ class DS2DY9250IAXA(BaseVendor):
             self._current_zoom = int(absolute_high["absoluteZoom"])
             self._current_elevation = int(absolute_high["elevation"])
             self._current_azimuth = int(absolute_high["azimuth"])
+            self._current_phi_angle = self._azimuth_to_angle(self._current_azimuth)
+            self._current_theta_angle = self._current_elevation / 10
             self._status = status
         except Exception as e:
             logging.error(f"Failed to get PTZ status: {e}")
@@ -437,6 +461,15 @@ class DS2DY9250IAXA(BaseVendor):
         return math.floor(
             (angle - 0) * (self._end_azimuth - self._start_azimuth) / (90 - 0)
             + self._start_azimuth
+        )
+
+    def _azimuth_to_angle(self, azi: int) -> float:
+        """Convert logical angle to azimuth value within the configured range."""
+        return math.floor(
+            (azi - self._end_azimuth)
+            * (90 - 0)
+            / (self._start_azimuth - self._end_azimuth)
+            + 0
         )
 
     def _angle_to_elevation(self, angle: float) -> int:

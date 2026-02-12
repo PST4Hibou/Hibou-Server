@@ -54,6 +54,16 @@ class BaseVendor(abc.ABC):
         """Return the current PTZ camera status."""
         raise NotImplementedError("This vendor does not implement status retrieval.")
 
+    def set_relative_ptz_position(
+        self,
+        elevation: float | None = None,
+        azimuth: float | None = None,
+        zoom: int | None = None,
+    ) -> bool:
+        raise NotImplementedError(
+            "This vendor does not implement relative PTZ positioning."
+        )
+
     def get_video_stream(self):
         """Optional: subclasses can override to provide RTSP or other streams."""
         raise NotImplementedError("This vendor does not implement video streaming.")

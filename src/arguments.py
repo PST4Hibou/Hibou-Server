@@ -29,6 +29,7 @@ parser.add_argument("--doctor", action="store_true", help="Run doctor")
 parser.add_argument(
     "--ptz-calibration", action="store_true", help="Run PTZ calibration"
 )
+parser.add_argument("--pid-tuning", action="store_true", help="Run PID tuning")
 parser.add_argument(
     "--channel-prefix",
     default="",
