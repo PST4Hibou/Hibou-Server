@@ -1,15 +1,14 @@
-from sympy.diffgeom.rn import theta
+import time
 
-from src.devices.camera.vendors.base_vendor import BaseVendor
+from src.devices.camera.vendors.base_vendor import BaseVendor, PTZAxisRange
 from src.computer_vision.rtsp_stream import RtspSource
 from hikvisionapi import Client
 
-
-import numpy as np
 import threading
 import logging
-import math
-import time
+
+from src.helpers.decorators import Range
+from src.helpers.math import map_range
 
 
 class DS2DY9250IAXA(BaseVendor):
@@ -17,34 +16,24 @@ class DS2DY9250IAXA(BaseVendor):
     Singleton PTZ camera controller.
     Provides an interface to control a PTZ (Pan-Tilt-Zoom) camera, ensuring only one
     instance of the class exists across the entire program.
+    Datasheet: https://www.hikvision.com/content/dam/hikvision/products/S000000001/S000000002/S000000011/S000000013/OFR000059/M000005882/Data_Sheet/Datasheet-of-DS-2DY9250IAX-A-D_20190816.pdf
     """
 
     _instance = None
     _lock = threading.Lock()  # For thread-safe singleton creation
 
+    _PAN_RANGE = PTZAxisRange(logical=BaseVendor.PAN_RANGE, hardware=Range(1, 3600))
+    _TILT_RANGE = PTZAxisRange(logical=BaseVendor.TILT_RANGE, hardware=Range(-900, 400))
+    _ZOOM_RANGE = PTZAxisRange(logical=BaseVendor.ZOOM_RANGE, hardware=Range(10, 67))
+
     # Speed constraints
-    MIN_SPEED = 1
-    MAX_SPEED = 7
     SPEED_MULTIPLIER = 15
 
-    PTZ_MIN_ZOOM = 10
-    PTZ_MAX_ZOOM = 67
-
-    SOFT_MIN_ZOOM = 1
-    SOFT_MAX_ZOOM = 20
-
-    # Valid axes for movement
-    VALID_AXES = {"X", "Y", "XY"}
-    DEFAULT_AXIS = "XY"
-
-    # Camera channel
+    # Camera motors channel
     CHANNEL_ID = 1
 
     # XML content type
     XML_CONTENT_TYPE = "application/xml"
-
-    # Angle tolerance for movement
-    ANGLE_TOLERANCE = 1.0
 
     MIN_INTERVAL = 1
 
@@ -88,12 +77,14 @@ class DS2DY9250IAXA(BaseVendor):
         self._start_azimuth = start_azimuth
         self._end_azimuth = end_azimuth
 
+        self._current_pan = 0
+        self._current_tilt = 0
+        self._current_zoom = 1
+
         self._current_elevation = 0
         self._current_azimuth = 0
-        self._current_zoom = 1
-        self._current_phi_angle = -50
-        self._current_theta_angle = -50
-        self._status: dict | None = None
+        self._current_zoom_hw = 1
+
         self._last_angle_update_time = 0
 
         self.rtsp_url = f"rtsp://{username}:{password}@{host}:{rtsp_port}/Streaming/Channels/10{video_channel}/"
@@ -106,11 +97,7 @@ class DS2DY9250IAXA(BaseVendor):
                 f"RTSP URL: rtsp://{username}:XXX@{host}:{rtsp_port}/Streaming/Channels/10{video_channel}/"
             )
         else:
-            logging.info("rtsp stream opened")
-
-        if not username and not password:
-            logging.warning("No username or password provided for PTZ connection.")
-            return
+            logging.info("RTSP stream opened")
 
         try:
             self._client = Client(
@@ -119,21 +106,6 @@ class DS2DY9250IAXA(BaseVendor):
             logging.info(f"✅ Connected to PTZ camera at {self._host}")
         except Exception as e:
             logging.error(f"❌ Failed to connect to PTZ camera at {self._host}: {e}")
-            raise ConnectionError(f"PTZ connection failed: {e}")
-
-    @classmethod
-    def get_instance(cls) -> "DS2DY9250IAXA":
-        """Return the singleton PTZ instance, if already created."""
-        if cls._instance is None:
-            raise RuntimeError("PTZ has not been initialized yet. Call PTZ(...) first.")
-        return cls._instance
-
-    def _ensure_client_initialized(self) -> bool:
-        """Check if the PTZ client is initialized and log an error if not."""
-        if not self._client:
-            logging.error("PTZ client not initialized.")
-            return False
-        return True
 
     @staticmethod
     def _build_absolute_position_xml(
@@ -170,70 +142,171 @@ class DS2DY9250IAXA(BaseVendor):
         </position3D>
         """.strip()
 
-    def _ui_zoom_to_camera_zoom(self, ui_zoom: int) -> int:
-        """Convert zoom value from UI to camera zoom value."""
-        ui_zoom = np.clip(ui_zoom, self.SOFT_MIN_ZOOM, self.SOFT_MAX_ZOOM)
+    @staticmethod
+    def _calculate_pan_tilt(
+        axis: str, speed: int, pan_clockwise: bool, tilt_clockwise: bool
+    ) -> tuple[int, int]:
+        """Calculate pan and tilt values based on axis and direction."""
+        pan = tilt = 0
+        if "X" in axis:
+            pan = speed if pan_clockwise else -speed
+        if "Y" in axis:
+            tilt = speed if tilt_clockwise else -speed
+        return pan, tilt
 
-        camera_zoom = (ui_zoom - self.SOFT_MIN_ZOOM) * (
-            self.PTZ_MAX_ZOOM - self.PTZ_MIN_ZOOM
-        ) / (self.SOFT_MAX_ZOOM - self.SOFT_MIN_ZOOM) + self.PTZ_MIN_ZOOM
-
-        return int(round(camera_zoom))
-
-    def _camera_zoom_to_ui_zoom(self, camera_zoom: int) -> int:
-        """Convert zoom value from camera to UI zoom value."""
-        camera_zoom = np.clip(camera_zoom, self.PTZ_MIN_ZOOM, self.PTZ_MAX_ZOOM)
-
-        ui_zoom = (camera_zoom - self.PTZ_MIN_ZOOM) * (
-            self.SOFT_MAX_ZOOM - self.SOFT_MIN_ZOOM
-        ) / (self.PTZ_MAX_ZOOM - self.PTZ_MIN_ZOOM) + self.SOFT_MIN_ZOOM
-
-        return int(round(ui_zoom))
-
-    def set_relative_ptz_position(
-        self,
-        elevation: float | None = None,
-        azimuth: float | None = None,
-        zoom: int | None = None,
-    ) -> bool:
-        if not self._ensure_client_initialized():
-            return False
-        elevation = (
-            self._current_elevation + elevation
-            if elevation is not None
-            else self._current_elevation
+    def _convert_pan_to_azimuth(self, pan: float) -> int:
+        return int(
+            map_range(
+                pan,
+                self._PAN_RANGE.logical.min,
+                self._PAN_RANGE.logical.max,
+                self._PAN_RANGE.hardware.min,
+                self._PAN_RANGE.hardware.max,
+            )
         )
-        azimuth = (
-            self._current_azimuth + azimuth
-            if azimuth is not None
-            else self._current_azimuth
+
+    def _azimuth_to_pan(self, elevation: int) -> float:
+        return map_range(
+            elevation,
+            self._PAN_RANGE.hardware.min,
+            self._PAN_RANGE.hardware.max,
+            self._PAN_RANGE.logical.min,
+            self._PAN_RANGE.logical.max,
         )
-        zoom = self._current_zoom + zoom if zoom is not None else self._current_zoom
 
-        return self.set_absolute_ptz_position(elevation, azimuth, zoom)
+    def _convert_tilt_to_elevation(self, tilt: float) -> int:
+        return int(
+            map_range(
+                tilt,
+                self._TILT_RANGE.logical.min,
+                self._TILT_RANGE.logical.max,
+                self._TILT_RANGE.hardware.min,
+                self._TILT_RANGE.hardware.max,
+            )
+        )
 
-    def set_absolute_ptz_position(
+    def _elevation_to_tilt(self, azimuth: int) -> float:
+        return map_range(
+            azimuth,
+            self._TILT_RANGE.hardware.min,
+            self._TILT_RANGE.hardware.max,
+            self._TILT_RANGE.logical.min,
+            self._TILT_RANGE.logical.max,
+        )
+
+    def _convert_zoom_to_hw_zoom(self, zoom: int) -> int:
+        return int(
+            map_range(
+                zoom,
+                self._ZOOM_RANGE.logical.min,
+                self._ZOOM_RANGE.logical.max,
+                self._ZOOM_RANGE.hardware.min,
+                self._ZOOM_RANGE.hardware.max,
+            )
+        )
+
+    def _hw_zoom_to_zoom(self, zoom: int) -> int:
+        return int(
+            map_range(
+                zoom,
+                self._ZOOM_RANGE.hardware.min,
+                self._ZOOM_RANGE.hardware.max,
+                self._ZOOM_RANGE.logical.min,
+                self._ZOOM_RANGE.logical.max,
+            )
+        )
+
+    def _convert_logical_to_hardware(self, pan, tilt, zoom):
+        return (
+            self._convert_pan_to_azimuth(pan),
+            self._convert_tilt_to_elevation(tilt),
+            self._convert_zoom_to_hw_zoom(zoom),
+        )
+
+    def _convert_hardware_to_logical(self, elevation, azimuth, zoom):
+        return (
+            self._azimuth_to_pan(elevation),
+            self._elevation_to_tilt(azimuth),
+            self._hw_zoom_to_zoom(zoom),
+        )
+
+    def _set_absolute_ptz_position(
         self,
-        elevation: float | None = None,
-        azimuth: float | None = None,
+        pan: float | None = None,
+        tilt: float | None = None,
         zoom: int | None = None,
     ) -> bool:
         """
-        Move the camera to an absolute PTZ position.
+        Command the camera to move to an absolute pan/tilt/zoom position.
+
+        This method issues an absolute PTZ movement request to the camera using
+        logical pan, tilt, and zoom coordinates. Any axis set to ``None`` will
+        retain its current value. Before sending the command, the method enforces
+        both an angular tolerance threshold and a minimum time interval between
+        updates to avoid redundant or excessive PTZ commands.
+
+        Logical PTZ values are converted to hardware-specific coordinates prior
+        to transmission. On successful execution, both logical and hardware PTZ
+        state caches are updated to reflect the new target position.
+
+        The command will not be sent if:
+        - The controller is not initialized
+        - The requested movement is within the configured angle tolerance
+        - The minimum time interval since the last update has not elapsed
+
+        Parameters
+        ----------
+        pan : float | None, optional
+            Target pan angle in logical degrees. If ``None``, the current pan
+            position is used.
+        tilt : float | None, optional
+            Target tilt angle in logical degrees. If ``None``, the current tilt
+            position is used.
+        zoom : int | None, optional
+            Target zoom level in logical units. If ``None``, the current zoom
+            level is used.
+
+        Returns
+        -------
+        bool
+            ``True`` if the PTZ command was successfully sent and the internal state
+            was updated, ``False`` otherwise.
         """
-        if not self._ensure_client_initialized():
+
+        if not self.is_initialized():
             return False
 
-        if elevation is None:
-            elevation = self._current_elevation
-        if azimuth is None:
-            azimuth = self._current_azimuth
+        if pan is None:
+            pan = self._current_pan
+
+        if tilt is None:
+            tilt = self._current_tilt
+
         if zoom is None:
             zoom = self._current_zoom
 
-        xml_command = self._build_absolute_position_xml(
-            elevation, azimuth, self._ui_zoom_to_camera_zoom(zoom)
+        delta_pan = abs(pan - self._current_pan)
+        delta_tilt = abs(tilt - self._current_tilt)
+        delta_zoom = abs(zoom - self._current_zoom)
+
+        # Check tolerance and minimal time interval
+        movement_small = (
+            delta_pan < self.ANGLE_TOLERANCE
+            and delta_tilt < self.ANGLE_TOLERANCE
+            and delta_zoom == 0
         )
+
+        now = time.time()
+        dt = now - self._last_angle_update_time
+
+        if movement_small or dt < self.MIN_INTERVAL:
+            return False
+
+        self._last_angle_update_time = now
+
+        azimuth, elevation, zoom_hw = self._convert_logical_to_hardware(pan, tilt, zoom)
+
+        xml_command = self._build_absolute_position_xml(elevation, azimuth, zoom_hw)
 
         try:
             self._client.PTZCtrl.channels[self.CHANNEL_ID].absolute(
@@ -242,15 +315,54 @@ class DS2DY9250IAXA(BaseVendor):
                 headers={"Content-Type": self.XML_CONTENT_TYPE},
             )
 
-            self._current_elevation = elevation
-            self._current_azimuth = azimuth
+            self._current_pan = pan
+            self._current_tilt = tilt
             self._current_zoom = zoom
+
+            self._current_azimuth = azimuth
+            self._current_elevation = elevation
+            self._current_zoom_hw = zoom_hw
 
             return True
 
         except Exception as e:
             logging.error(f"Error sending PTZ absolute command: {e}")
             return False
+
+    def _set_relative_ptz_position(
+        self,
+        pan: float | None = None,
+        tilt: float | None = None,
+        zoom: int | None = None,
+    ) -> bool:
+        """
+        Move the camera by a relative pan, tilt, and zoom offset.
+
+        Parameters
+        ----------
+        pan : float | None
+            Pan offset in logical degrees. If ``None``, pan is unchanged.
+        tilt : float | None
+            Tilt offset in logical degrees. If ``None``, tilt is unchanged.
+        zoom : int | None
+            Zoom offset in logical units. If ``None``, zoom is unchanged.
+        """
+        if pan is not None:
+            pan = self._current_pan + pan
+        else:
+            pan = self._current_pan
+
+        if tilt is not None:
+            tilt = self._current_tilt + tilt
+        else:
+            tilt = self._current_tilt
+
+        if zoom is not None:
+            zoom = self._current_zoom + zoom
+        else:
+            zoom = self._current_zoom
+
+        return self._set_absolute_ptz_position(pan, tilt, zoom)
 
     def _send_continuous_ptz_command(self, pan: int, tilt: int) -> bool:
         """
@@ -268,7 +380,7 @@ class DS2DY9250IAXA(BaseVendor):
         Returns:
             bool: True if the command was sent successfully, otherwise False.
         """
-        if not self._ensure_client_initialized():
+        if not self.is_initialized():
             return False
 
         xml_command = self._build_continuous_movement_xml(pan, tilt)
@@ -286,57 +398,7 @@ class DS2DY9250IAXA(BaseVendor):
             logging.error(f"Error sending PTZ continuous command: {e}")
             return False
 
-    def _normalize_speed(self, speed: int) -> int:
-        """Normalize speed value to valid range and apply multiplier."""
-        return max(self.MIN_SPEED, min(speed, self.MAX_SPEED)) * self.SPEED_MULTIPLIER
-
-    def _validate_axis(self, axis: str) -> str:
-        """Validate and normalize axis parameter."""
-        normalized_axis = axis.upper()
-        if normalized_axis not in self.VALID_AXES:
-            logging.warning(
-                f"Invalid axis '{axis}', defaulting to '{self.DEFAULT_AXIS}'."
-            )
-            return self.DEFAULT_AXIS
-        return normalized_axis
-
-    def set_3d_position(self, start_x, start_y, end_x, end_y) -> bool:
-        if not self._ensure_client_initialized():
-            return False
-
-        xml_command = self._build_3d_position(start_x, start_y, end_x, end_y)
-
-        try:
-            self._client.PTZCtrl.channels[self.CHANNEL_ID].position3D(
-                method="put",
-                data=xml_command,
-                headers={"Content-Type": self.XML_CONTENT_TYPE},
-            )
-
-            return True
-
-        except Exception as e:
-            logging.error(f"Error sending PTZ continuous command: {e}")
-            return False
-
-    @staticmethod
-    def _calculate_pan_tilt(
-        axis: str, speed: int, pan_clockwise: bool, tilt_clockwise: bool
-    ) -> tuple[int, int]:
-        """Calculate pan and tilt values based on axis and direction."""
-        pan = tilt = 0
-        if "X" in axis:
-            pan = speed if pan_clockwise else -speed
-        if "Y" in axis:
-            tilt = speed if tilt_clockwise else -speed
-        return pan, tilt
-
-    def get_video_stream(self):
-        if not self._initialized:
-            return None
-        return self.rtsp_stream
-
-    def start_continuous(
+    def _start_continuous(
         self,
         speed: int = 5,
         axis: str = "XY",
@@ -366,10 +428,11 @@ class DS2DY9250IAXA(BaseVendor):
             bool: True if the continuous movement command is successfully initiated,
                 False otherwise.
         """
-        normalized_speed = self._normalize_speed(speed)
-        validated_axis = self._validate_axis(axis)
+
+        if not self.is_initialized():
+            return False
         pan, tilt = self._calculate_pan_tilt(
-            validated_axis, normalized_speed, pan_clockwise, tilt_clockwise
+            axis, speed * self.SPEED_MULTIPLIER, pan_clockwise, tilt_clockwise
         )
 
         success = self._send_continuous_ptz_command(pan, tilt)
@@ -377,6 +440,30 @@ class DS2DY9250IAXA(BaseVendor):
         if not success:
             logging.debug("Failed to start continuous PTZ movement.")
         return success
+
+    def _update_status(self) -> None:
+        """Update internal status from PTZ camera."""
+        if not self.is_initialized():
+            return
+
+        try:
+            status = self._client.PTZCtrl.channels[self.CHANNEL_ID].status(method="get")
+            absolute_high = status["PTZStatus"]["AbsoluteHigh"]
+
+            self._current_azimuth = int(absolute_high["azimuth"])
+            self._current_elevation = int(absolute_high["elevation"])
+            self._current_zoom_hw = int(absolute_high["absoluteZoom"])
+
+            self._current_pan, self._current_tilt, self._current_zoom = (
+                self._convert_hardware_to_logical(
+                    self._current_elevation,
+                    self._current_azimuth,
+                    self._current_zoom_hw,
+                )
+            )
+            self._status = status
+        except Exception as e:
+            logging.error(f"Failed to get PTZ status: {e}")
 
     def stop_continuous(self) -> None:
         """
@@ -391,6 +478,9 @@ class DS2DY9250IAXA(BaseVendor):
         """
         self._send_continuous_ptz_command(0, 0)
         self._update_status()
+
+    def is_initialized(self) -> bool:
+        return self._initialized and self._client is not None
 
     def get_azimuth(self) -> int:
         """
@@ -418,6 +508,40 @@ class DS2DY9250IAXA(BaseVendor):
         """
         return self._current_elevation
 
+    @classmethod
+    def get_instance(cls) -> "DS2DY9250IAXA":
+        """Return the singleton PTZ instance, if already created."""
+        if cls._instance is None:
+            raise RuntimeError("PTZ has not been initialized yet. Call PTZ(...) first.")
+        return cls._instance
+
+    def get_status(self, force_update: bool = False) -> dict:
+        """
+        Retrieve current PTZ status and parse useful values.
+        """
+        if force_update:
+            self._update_status()
+        return self._status
+
+    def set_3d_position(self, start_x, start_y, end_x, end_y) -> bool:
+        if not self.is_initialized():
+            return False
+
+        xml_command = self._build_3d_position(start_x, start_y, end_x, end_y)
+
+        try:
+            self._client.PTZCtrl.channels[self.CHANNEL_ID].position3D(
+                method="put",
+                data=xml_command,
+                headers={"Content-Type": self.XML_CONTENT_TYPE},
+            )
+
+            return True
+
+        except Exception as e:
+            logging.error(f"Error sending PTZ continuous command: {e}")
+            return False
+
     def get_zoom(self) -> int:
         """
         Gets the zoom level of the PTZ (Pan-Tilt-Zoom) camera.
@@ -431,105 +555,10 @@ class DS2DY9250IAXA(BaseVendor):
         """
         return self._current_zoom
 
-    def _update_status(self) -> None:
-        """Update internal status from PTZ camera."""
-        if not self._ensure_client_initialized():
-            return
-
-        try:
-            status = self._client.PTZCtrl.channels[self.CHANNEL_ID].status(method="get")
-            absolute_high = status["PTZStatus"]["AbsoluteHigh"]
-            self._current_zoom = int(absolute_high["absoluteZoom"])
-            self._current_elevation = int(absolute_high["elevation"])
-            self._current_azimuth = int(absolute_high["azimuth"])
-            self._current_phi_angle = self._azimuth_to_angle(self._current_azimuth)
-            self._current_theta_angle = self._current_elevation / 10
-            self._status = status
-        except Exception as e:
-            logging.error(f"Failed to get PTZ status: {e}")
-
-    def get_status(self, force_update: bool = False) -> dict:
-        """
-        Retrieve current PTZ status and parse useful values.
-        """
-        if force_update:
-            self._update_status()
-        return self._status
-
-    def _angle_to_azimuth(self, angle: float) -> int:
-        """Convert logical angle to azimuth value within the configured range."""
-        return math.floor(
-            (angle - 0) * (self._end_azimuth - self._start_azimuth) / (90 - 0)
-            + self._start_azimuth
-        )
-
-    def _azimuth_to_angle(self, azi: int) -> float:
-        """Convert logical angle to azimuth value within the configured range."""
-        return math.floor(
-            (azi - self._end_azimuth)
-            * (90 - 0)
-            / (self._start_azimuth - self._end_azimuth)
-            + 0
-        )
-
-    def _angle_to_elevation(self, angle: float) -> int:
-        """Convert logical angle to azimuth value within the configured range."""
-        return math.floor(
-            (angle - 0) * (self._end_azimuth - self._start_azimuth) / (90 - 0)
-            + self._start_azimuth
-        )
-
-    def get_angles(self) -> tuple[float, float]:
-        return self._current_phi_angle, self._current_theta_angle
-
-    def set_relative_angles(self, phi: float = None, theta: float = None):
-        if phi is None and theta is None:
-            return
-        phi = None if phi is None else phi + self._current_phi_angle
-        theta = None if theta is None else theta + self._current_theta_angle
-        self.go_to_angle(phi, theta)
-
-    def go_to_angle(self, phi: float = None, theta: float = None) -> bool:
-        """
-        Converts a logical angle into azimuth range and moves the camera.
-        Only sends a command if:
-        - The change in angle exceeds the tolerance, AND
-        - At least MIN_INTERVAL seconds have passed since the previous update.
-        """
-        if not self._ensure_client_initialized():
-            return False
-
-        if phi is None and theta is None:
-            return False
-
-        now = time.time()
-        dt = now - self._last_angle_update_time
-
-        # Use existing angles if arg is None
-        target_phi = phi if phi is not None else self._current_phi_angle
-        target_theta = theta if theta is not None else self._current_theta_angle
-
-        delta_phi = abs(target_phi - self._current_phi_angle)
-        delta_theta = abs(target_theta - self._current_theta_angle)
-
-        # Check tolerance and minimal time interval
-        angle_change_small = (delta_phi < self.ANGLE_TOLERANCE) and (
-            delta_theta < self.ANGLE_TOLERANCE
-        )
-        too_soon = dt < self.MIN_INTERVAL
-
-        if angle_change_small or too_soon:
-            return False
-
-        # Update internal state
-        self._last_angle_update_time = now
-        self._current_phi_angle = target_phi
-        self._current_theta_angle = target_theta
-
-        azimuth = self._angle_to_azimuth(target_phi)
-        elevation = int(target_theta * 10)
-
-        return self.set_absolute_ptz_position(elevation, azimuth, self._current_zoom)
+    def get_video_stream(self):
+        if not self._initialized:
+            return None
+        return self.rtsp_stream
 
     def release_stream(self):
         """Safely release the RTSP stream."""

@@ -20,27 +20,27 @@ class PIDTracker(BaseTracker):
 
     def __init__(
         self,
-        yaw_pid_coefs: PIDTracker.PidCoefs,
-        pitch_pid_coefs: PIDTracker.PidCoefs,
+        pan_pid: PIDTracker.PidCoefs,
+        tilt_pid: PIDTracker.PidCoefs,
         zoom_pid: PIDTracker.PidCoefs,
     ):
         """
         Initialize the PID tracker with specified gains and parameters.
         """
-        self.yaw_pid = PID(
-            yaw_pid_coefs.kp,
-            yaw_pid_coefs.ki,
-            yaw_pid_coefs.kd,
-            setpoint=yaw_pid_coefs.setpoint,
-            output_limits=yaw_pid_coefs.output_limits,
+        self.pan_pid = PID(
+            pan_pid.kp,
+            pan_pid.ki,
+            pan_pid.kd,
+            setpoint=pan_pid.setpoint,
+            output_limits=pan_pid.output_limits,
             sample_time=0.6,
         )
-        self.pitch_pid = PID(
-            pitch_pid_coefs.kp,
-            pitch_pid_coefs.ki,
-            pitch_pid_coefs.kd,
-            setpoint=pitch_pid_coefs.setpoint,
-            output_limits=pitch_pid_coefs.output_limits,
+        self.tilt_pid = PID(
+            tilt_pid.kp,
+            tilt_pid.ki,
+            tilt_pid.kd,
+            setpoint=tilt_pid.setpoint,
+            output_limits=tilt_pid.output_limits,
             sample_time=0.6,
         )
 
@@ -82,11 +82,10 @@ class PIDTracker(BaseTracker):
         # PTZ orientation
         dx, dy = self.calculate_distance_from_center(boxn)
 
-        yaw_angle = self.yaw_pid(dx)
-        pitch_angle = self.pitch_pid(dy)
+        pan_angle = self.pan_pid(dx)
+        tilt_angle = self.tilt_pid(dy)
 
         # Zoom level
         zoom_level = self.zoom_pid(boxn[2] - boxn[0])
-        print(boxn[2] - boxn[0])
 
-        return yaw_angle, pitch_angle, zoom_level
+        return pan_angle, -tilt_angle, zoom_level

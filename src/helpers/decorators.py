@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+
+
 def singleton(class_):
     instances = {}
     def getinstance(*args, **kwargs):
@@ -5,3 +8,8 @@ def singleton(class_):
             instances[class_] = class_(*args, **kwargs)
         return instances[class_]
     return getinstance
+
+@dataclass(frozen=True)
+class Range:
+    min: int
+    max: int

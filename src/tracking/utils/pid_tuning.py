@@ -50,14 +50,14 @@ def start_pid_tuning():
     drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
 
     tracker = PIDTracker(
-        yaw_pid_coefs=PIDTracker.PidCoefs(
+        pan_pid=PIDTracker.PidCoefs(
             kp=30,
             ki=0.0,
             kd=0.3,
             setpoint=0,
             output_limits=(-20, 20),
         ),
-        pitch_pid_coefs=PIDTracker.PidCoefs(
+        tilt_pid=PIDTracker.PidCoefs(
             kp=30,
             ki=0.0,
             kd=0.03,

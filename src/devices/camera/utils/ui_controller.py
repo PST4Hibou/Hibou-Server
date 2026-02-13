@@ -76,12 +76,16 @@ def start_ui_controller(ptz_name: str, text_bottom: str = ""):
 
     # Speed text
     text_speed = ax.text(
-        0.5, 0.95, f"Speed: {speed}", ha="center", va="center", fontsize=14
+        0.5, 0.99, f"Speed: {speed}", ha="center", va="center", fontsize=14
     )
 
     # Azimuth text
     azimuth_text = ax.text(
-        0.5, 0.9, f"Azimuth: Unknown", ha="center", va="center", fontsize=14
+        0.5, 0.92, f"Azimuth: Unknown", ha="center", va="center", fontsize=14
+    )
+
+    elevation_text = ax.text(
+        0.5, 0.85, f"Elevation: Unknown", ha="center", va="center", fontsize=14
     )
     # Bottom text
     ax.text(
@@ -136,7 +140,9 @@ def start_ui_controller(ptz_name: str, text_bottom: str = ""):
         ]:
             stop(event)
             azi = PTZController(ptz_name).get_azimuth()
+            ele = PTZController(ptz_name).get_elevation()
             azimuth_text.set_text(f"Azimuth: {azi}")
+            elevation_text.set_text(f"Elevation: {ele}")
             plt.draw()
 
     # Connect actions

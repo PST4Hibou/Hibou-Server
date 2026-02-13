@@ -6,7 +6,6 @@ from src.logger import update_log_level, update_global_log_level
 from src.audio.angle_of_arrival import AngleOfArrivalEstimator
 from src.computer_vision.drone_detection import DroneDetection
 from src.devices.camera.ptz_controller import PTZController
-from src.tracking.utils.pid_tuning import start_pid_tuning
 from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
 from src.tracking.pid_tracker import PIDTracker
@@ -41,8 +40,6 @@ def apply_arguments():
         run_doctor()
     if args.ptz_calibration:
         start_ptz_calibration()
-    if args.pid_tuning:
-        start_pid_tuning()
 
 
 class AudioProcess:
@@ -138,17 +135,24 @@ if __name__ == "__main__":
     #     OpenCVStreamingVendor,
     #     video_channel=0,
     # )
+
+    PTZController("main_camera").set_absolute_ptz_position(
+        pan=160,
+        tilt=20,
+        zoom=1,
+    )
+
     stream = PTZController("main_camera").get_video_stream()
 
     tracker = PIDTracker(
-        yaw_pid_coefs=PIDTracker.PidCoefs(
-            kp=10,
+        pan_pid=PIDTracker.PidCoefs(
+            kp=30,
             ki=0.0,
             kd=0.3,
             setpoint=0,
-            output_limits=(-5, 5),
+            output_limits=(-20, 20),
         ),
-        pitch_pid_coefs=PIDTracker.PidCoefs(
+        tilt_pid=PIDTracker.PidCoefs(
             kp=10,
             ki=0.0,
             kd=0.03,
@@ -156,7 +160,7 @@ if __name__ == "__main__":
             output_limits=(-5, 5),
         ),
         zoom_pid=PIDTracker.PidCoefs(
-            kp=5, ki=0.0, kd=0.5, setpoint=0.2, output_limits=(-10, 3)
+            kp=5, ki=0.0, kd=0.5, setpoint=0.2, output_limits=(-10, 5)
         ),
     )
 
@@ -189,9 +193,6 @@ if __name__ == "__main__":
             stream.start_recording(recs_folder_name)
         drone_detector.start(stream, display=SETTINGS.CV_VIDEO_PLAYBACK)
         print("Listening started. Press Ctrl+C to stop.")
-
-        PTZController("main_camera").set_absolute_ptz_position(zoom=0)
-        PTZController("main_camera").go_to_angle(phi=10, theta=20)
 
         # Main loop
         while True:
@@ -238,23 +239,22 @@ if __name__ == "__main__":
                         if class_id != 0:  # Skip if not a drone
                             continue
                         x1, y1, x2, y2 = box
-
-                        controls = tracker.update(box)
-
-                        PTZController("main_camera").set_relative_angles(
-                            phi=controls[0], theta=-controls[1]
-                        )
-
                         box_center_x = (x1 + x2) / 2
                         box_center_y = (y1 + y2) / 2
 
-                        if (
+                        controls = tracker.update(box)
+
+                        is_center = (
                             abs(0.5 - box_center_x) < 0.1
                             and abs(0.5 - box_center_y) < 0.1
-                        ):
-                            PTZController("main_camera").set_relative_ptz_position(
-                                zoom=int(controls[2])
-                            )
+                        )
+
+                        # print(controls)
+                        PTZController("main_camera").set_relative_ptz_position(
+                            pan=controls[0],
+                            tilt=controls[1],
+                            zoom=controls[2] if is_center else None,
+                        )
 
     except KeyboardInterrupt:
         print("\nStopping audio...")
