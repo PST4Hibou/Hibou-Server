@@ -35,8 +35,6 @@ class DS2DY9250IAXA(BaseVendor):
     # XML content type
     XML_CONTENT_TYPE = "application/xml"
 
-    MIN_INTERVAL = 1
-
     def __new__(cls, *args, **kwargs):
         """Ensure only one PTZ instance is created."""
         if cls._instance is None:
@@ -299,7 +297,7 @@ class DS2DY9250IAXA(BaseVendor):
         now = time.time()
         dt = now - self._last_angle_update_time
 
-        if movement_small or dt < self.MIN_INTERVAL:
+        if movement_small or dt < BaseVendor.RATE_LIMIT_INTERVAL:
             return False
 
         self._last_angle_update_time = now
@@ -343,9 +341,9 @@ class DS2DY9250IAXA(BaseVendor):
         pan : float | None
             Pan offset in logical degrees. If ``None``, pan is unchanged.
         tilt : float | None
-            Tilt offset in logical degrees. If ``None``, tilt is unchanged.
+            Tilt offset in logical degrees. If ``None``, the tilt is unchanged.
         zoom : int | None
-            Zoom offset in logical units. If ``None``, zoom is unchanged.
+            Zoom offset in logical units. If ``None``, the zoom is unchanged.
         """
         if pan is not None:
             pan = self._current_pan + pan

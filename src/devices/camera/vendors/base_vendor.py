@@ -31,6 +31,8 @@ class BaseVendor(abc.ABC):
 
     VALID_AXES = {"X", "Y", "XY"}
 
+    RATE_LIMIT_INTERVAL: Final[int] = 1
+
     # PAN
     def _validate_pan(self, pan: float) -> None:
         if not (self.PAN_RANGE.min <= pan <= self.PAN_RANGE.max):
