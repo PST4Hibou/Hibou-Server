@@ -29,7 +29,7 @@ class Settings:
     AUDIO_CHUNK_DURATION: int
     AUDIO_STREAM_LATENCY: int
     AUDIO_REC_HZ: int
-    AUDIO_VOLUME: int
+    AUDIO_VOLUME: float
 
     REC_AUDIO_ENABLE: bool
     REC_VIDEO_ENABLE: bool
@@ -59,7 +59,7 @@ class Settings:
     AI_CV_ENABLE: bool
 
     AUDIO_PLAYBACK: bool = False  # Only for debug purposes
-    AUDIO_ENERGY_SPECTRUM: bool = False  # Only for debug purposes
+    AUDIO_ENERGY_SPECTRUM: bool = True  # Only for debug purposes
     AUDIO_STFT_SPECTRUM: bool = False  # Only for debug purposes
     AUDIO_RADAR: bool = False  # Only for debug purposes
     CV_VIDEO_PLAYBACK: bool = False  # Only for debug purposes
@@ -99,7 +99,7 @@ try:
         LOG_CONF_PATH=os.getenv("LOG_CONF_PATH"),
         LOG_LEVEL=os.getenv("LOG_LEVEL"),
         INFER_FROM_FOLDER=os.getenv("INFER_FROM_FOLDER"),
-        AUDIO_VOLUME=int(os.getenv("AUDIO_VOLUME")),
+        AUDIO_VOLUME=float(os.getenv("AUDIO_VOLUME")),
         PTZ_USERNAME=os.getenv("PTZ_USERNAME"),
         PTZ_PASSWORD=os.getenv("PTZ_PASSWORD"),
         PTZ_HOST=os.getenv("PTZ_HOST"),
