@@ -45,8 +45,8 @@ class YamahaTio1608Controller(BaseController):
         Returns:
             YamahaTio1608Controller
         """
-        if not (yamaha_device := YamahaRemoteControl.scan_devices(waits=True)):
+        if not (yamaha_devices := YamahaRemoteControl.scan_devices(waits=True)):
             return []
         logging.info("Discovered Yamaha Top 1608 Controller")
 
-        return [cls(dev.ip_address) for dev in yamaha_device]
+        return [cls(dev.ip_address) for dev in yamaha_devices.values()]

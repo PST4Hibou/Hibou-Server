@@ -42,7 +42,7 @@ class YamahaDiscoverer:
         )
         self.sock.settimeout(2.0)
 
-        self.devices = set()
+        self.devices = {}
         self.connected = True
 
         self._t.start()
@@ -58,7 +58,8 @@ class YamahaDiscoverer:
         while self.connected:
             try:
                 data, (addr, _) = self.sock.recvfrom(4096)
-                self.devices.add(YSDPPacket.from_bytes(data))
+                packet = YSDPPacket.from_bytes(data)
+                self.devices[packet.ip_address] = packet  # Use IP as key for uniqueness
             except TimeoutError:
                 pass
             finally:
