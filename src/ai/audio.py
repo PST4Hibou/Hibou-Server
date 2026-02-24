@@ -1,18 +1,8 @@
-from pathlib import Path
-from typing import Union
-from src.logger import logger
-
-from torch import nn
-import torch
-
-import librosa
-
 import numpy as np
-
 import importlib.util
 import sys
 
-from src.ai import has_cuda
+from src.settings import SETTINGS
 
 
 def load_module(file_path, module_name):
@@ -32,28 +22,11 @@ class ModelProxy:
         self._enable = True
         self.model_name = model_name
 
-        self._load_model()
-
-    def _load_model(self):
-        module = load_module(
-            "./assets/models/" + self.model_name + ".py", "external_module"
+        # Load the Python Module containg the Model declaration
+        self._module = load_module(
+            f"{SETTINGS.AI_MODELS_FOLDER}{self.model_name}/model.py", "external_module"
         )
-        self._model = module.Model()
-
-        # We need to ensure that we put on CPU when CUDA's not
-        # available, or we may trigger model load issues when the
-        # model was previoulsy on GPU before save.
-        state = (
-            torch.load("./assets/models/" + self.model_name + ".pt")
-            if has_cuda
-            else torch.load(
-                "./assets/models/" + self.model_name + ".pt",
-                map_location=torch.device("cpu"),
-            )
-        )
-
-        self._model.model.load_state_dict(state)
-        self._model.model.eval()
+        self._model = self._module.Model()
 
     def infer(self, audios: list) -> np.ndarray:
         if not self._enable:
