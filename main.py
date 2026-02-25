@@ -22,6 +22,11 @@ from collections import deque
 from pathlib import Path
 from time import sleep
 
+from src.acoustic_analysis.data import MicInfo, AudioBuffer, InferenceResult
+from src.helpers.decorators import SingletonMeta
+import assets.audio_strategies.music as Music
+
+import numpy as np
 import datetime
 import logging
 import os
@@ -47,10 +52,37 @@ class AudioProcess:
         self.audio_queue = deque(maxlen=1)
         self.model = ModelProxy(args.audio_model)
 
+        mics_data = [
+            MicInfo(
+                channel=i,
+                xpos=Music.mic_positions[1][i],
+                ypos=Music.mic_positions[0][i],
+                orientation=Music.angles[i],
+            )
+            for i in range(Music.num_mics)
+        ]
+
+        self.analyzer = Music.Analyzer(SETTINGS.AUDIO_REC_HZ, mics_data)
+
     def process(self, audio_samples: list[Channel]):
         self.audio_queue.append(audio_samples)
 
         res = self.model.infer(audio_samples)
+
+        i = 0
+        for audio in audio_samples:
+            self.analyzer.push_buffer(
+                AudioBuffer(timestamp=0, channel=i, data=np.array(audio))
+            )
+            i += 1
+        i = 0
+        for pred in res:
+            self.analyzer.push_inference(
+                InferenceResult(timestamp=0, channel=i, confidence=0, drone=pred)
+            )
+            i += 1
+
+        print(self.analyzer.get_angle())
         # if np.any(res):
         #     print(f"DRONE: {res}")
         # else:
@@ -263,3 +295,4 @@ if __name__ == "__main__":
         drone_detector.stop()
         PTZController.remove()
         audio_source.stop()
+        SingletonMeta.clear()
