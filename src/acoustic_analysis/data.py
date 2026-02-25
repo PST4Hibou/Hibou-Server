@@ -9,7 +9,8 @@ class MicInfo:
     """
 
     channel: int
-    angle: float
+    xpos: float
+    ypos: float
     orientation: float
 
 
@@ -29,7 +30,6 @@ class AudioBuffer(TimestampedData):
     A class to represent an audio buffer, for ONLY ONE channel.
     """
 
-    sample_rate: int
     data: np.ndarray
 
 
