@@ -1,7 +1,6 @@
 from src.computer_vision.video_source import VideoSource
 from ultralytics.engine.results import Results
 from .models.yolo_model import YOLOModel
-from .utils import draw_detections
 from collections import deque
 from pathlib import Path
 
@@ -28,7 +27,7 @@ class DroneDetection:
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self._stream: VideoSource | None = None
-        self._fps = 0.0
+        self._frame_interval = None
 
         self.results_queue = deque(maxlen=1)
 
@@ -42,49 +41,40 @@ class DroneDetection:
 
         logging.info("Detection loop started")
 
+        next_frame_time = time.time()
         while not self._stop_event.is_set():
+            next_frame_time += self._frame_interval
+
             ret, frame = self._stream.get_frame()
             if not ret:
-                self._sleep()
+                time.sleep(0.005)
                 continue
 
-            # FASTEST WAY — YOLO predict()
             if self.channels == 1:
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-            results = self.model.predict(frame)
+            else:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            # If it contains drones
-            if any([len(result.boxes) > 0 for result in results]):
+            results = self.model.track(frame)
+
+            if any(len(result.boxes) > 0 for result in results):
                 self.results_queue.append(results)
-                frame = draw_detections(frame, results)
 
             if display:
-                # display_frame = cv2.resize(
-                #     frame,
-                #     dsize=(
-                #         frame.shape[1] // 2,
-                #         frame.shape[0] // 2,
-                #     ),
-                #     interpolation=cv2.INTER_AREA,
-                # )
-                cv2.imshow("Drone Detection", frame)
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    self.stop()
-                    break
+                annotated_frame = results[0].plot()
+                cv2.imshow("Tracking", annotated_frame)
+                cv2.waitKey(1)
 
-            self._sleep()
+            sleep_time = next_frame_time - time.time()
+
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+            else:
+                # we're behind schedule -> reset timing
+                next_frame_time = time.time()
 
         logging.info("Detection loop ended")
         cv2.destroyAllWindows()
-
-    def _sleep(self):
-        """Method used to let other code parts run. Should be called from _run_detection loop."""
-        if self._fps == 0.0:
-            self._fps = self._stream.get_fps()
-            if self._fps != 0.0:
-                self._fps = 1.0 / self._stream.get_fps()
-
-        time.sleep(self._fps / 10.0)
 
     def get_last_results(self) -> list[Results] | None:
         """Retrieves the first available result."""
@@ -106,9 +96,10 @@ class DroneDetection:
             return
 
         self._stream = stream
-        self._fps = self._stream.get_fps()
-        if self._fps != 0.0:
-            self._fps = 1.0 / self._fps
+
+        fps = self._stream.get_fps()
+        self._frame_interval = 1.0 / fps if fps > 0 else 0.03  # fallback ~30 FPS
+
         self._stop_event.clear()
         self._thread = threading.Thread(
             target=self._run_detection, args=(display,), daemon=True

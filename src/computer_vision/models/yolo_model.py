@@ -22,10 +22,13 @@ class YOLOModel:
 
     def track(self, frame):
         """Run tracking/detection on a frame."""
-        # YOLOv8 and YOLOv11 support .track() or .predict() APIs
-        # results = self.model.track(frame, stream=True)
-        results = self.model.track(frame, conf=0.3, iou=0.5)
-        return results
+        return self.model.track(
+            frame,
+            persist=True,
+            conf=0.55,
+            iou=0.3,
+            verbose=False,
+        )
 
     def predict(self, frame):
         return self.model.predict(frame, conf=0.3, iou=0.5, verbose=False)
