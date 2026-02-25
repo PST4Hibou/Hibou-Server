@@ -1,14 +1,12 @@
-import time
-
 from src.devices.camera.vendors.base_vendor import BaseVendor, PTZAxisRange
 from src.computer_vision.rtsp_stream import RtspSource
+from src.helpers.decorators import Range
+from src.helpers.math import map_range
 from hikvisionapi import Client
 
 import threading
 import logging
-
-from src.helpers.decorators import Range
-from src.helpers.math import map_range
+import time
 
 
 class DS2DY9250IAXA(BaseVendor):
@@ -25,9 +23,9 @@ class DS2DY9250IAXA(BaseVendor):
     _PAN_RANGE = PTZAxisRange(logical=BaseVendor.PAN_RANGE, hardware=Range(1, 3600))
     _TILT_RANGE = PTZAxisRange(logical=BaseVendor.TILT_RANGE, hardware=Range(-900, 400))
     _ZOOM_RANGE = PTZAxisRange(logical=BaseVendor.ZOOM_RANGE, hardware=Range(10, 67))
-
-    # Speed constraints
-    SPEED_MULTIPLIER = 15
+    _SPEED_RANGE = PTZAxisRange(
+        logical=BaseVendor.SPEED_RANGE, hardware=Range(-100, 100)
+    )
 
     # Camera motors channel
     CHANNEL_ID = 1
@@ -82,6 +80,9 @@ class DS2DY9250IAXA(BaseVendor):
         self._current_elevation = 0
         self._current_azimuth = 0
         self._current_zoom_hw = 1
+
+        self._current_pan_speed = 0  # Store logical speed
+        self._current_tilt_speed = 0
 
         self._last_angle_update_time = 0
 
@@ -140,17 +141,29 @@ class DS2DY9250IAXA(BaseVendor):
         </position3D>
         """.strip()
 
-    @staticmethod
-    def _calculate_pan_tilt(
-        axis: str, speed: int, pan_clockwise: bool, tilt_clockwise: bool
-    ) -> tuple[int, int]:
+    def _calculate_pan_tilt(self, pan_speed: int, tilt_speed: int) -> tuple[int, int]:
         """Calculate pan and tilt values based on axis and direction."""
-        pan = tilt = 0
-        if "X" in axis:
-            pan = speed if pan_clockwise else -speed
-        if "Y" in axis:
-            tilt = speed if tilt_clockwise else -speed
-        return pan, tilt
+        pan_speed = map_range(
+            pan_speed,
+            self._SPEED_RANGE.logical.min,
+            self._SPEED_RANGE.logical.max,
+            self._SPEED_RANGE.hardware.min,
+            self._SPEED_RANGE.hardware.max,
+        )
+
+        tilt_speed = map_range(
+            tilt_speed,
+            self._SPEED_RANGE.logical.min,
+            self._SPEED_RANGE.logical.max,
+            self._SPEED_RANGE.hardware.min,
+            self._SPEED_RANGE.hardware.max,
+        )
+
+        if abs(pan_speed) == 10:
+            pan_speed *= 1.5  # 15 is the minimum speed to turn camera
+        if abs(tilt_speed) == 10:
+            tilt_speed *= 1.5
+        return int(pan_speed), int(tilt_speed)
 
     def _convert_pan_to_azimuth(self, pan: float) -> int:
         return int(
@@ -396,44 +409,43 @@ class DS2DY9250IAXA(BaseVendor):
             logging.error(f"Error sending PTZ continuous command: {e}")
             return False
 
-    def _start_continuous(
-        self,
-        speed: int = 5,
-        axis: str = "XY",
-        pan_clockwise: bool = True,
-        tilt_clockwise: bool = True,
-    ) -> bool:
+    def _start_continuous(self, pan_speed: int, tilt_speed: int) -> bool:
         """
-        Starts a continuous Pan-Tilt-Zoom (PTZ) movement command.
+        Start or update a continuous Pan-Tilt (PT) movement.
 
-        This method initiates a continuous movement of the PTZ camera along the
-        specified axis, at the given speed, and in the indicated direction. The
-        speed is constrained within the allowable range, and if an invalid axis
-        is provided, the method defaults to movement along both axes ("XY").
-        The movement direction can independently be specified for both pan
-        (horizontal) and tilt (vertical).
+        This method initiates or updates a continuous pan and tilt movement
+        using the specified speeds. If the camera is not initialized, the
+        movement is not started and the method returns False.
+
+        If the requested pan and tilt speeds are already active, no new
+        movement command is issued and the method returns True.
 
         Args:
-            speed (int): Speed of the PTZ movement. Defaults to 5.
-            axis (str): Axis of movement. Acceptable values are "X", "Y", or "XY".
-                Defaults to "XY".
-            pan_clockwise (bool): Direction of pan movement. If True, the camera
-                pans clockwise. Defaults to True.
-            tilt_clockwise (bool): Direction of tilt movement. If True, the camera
-                tilts clockwise. Defaults to True.
+            pan_speed (int): Horizontal (pan) movement speed. The sign
+                determines the direction.
+            tilt_speed (int): Vertical (tilt) movement speed. The sign
+                determines the direction.
 
         Returns:
-            bool: True if the continuous movement command is successfully initiated,
-                False otherwise.
+            bool: True if the movement is active or successfully started;
+            False otherwise.
         """
 
         if not self.is_initialized():
             return False
-        pan, tilt = self._calculate_pan_tilt(
-            axis, speed * self.SPEED_MULTIPLIER, pan_clockwise, tilt_clockwise
-        )
+
+        if (
+            pan_speed == self._current_pan_speed
+            and tilt_speed == self._current_tilt_speed
+        ):
+            return True
+
+        pan, tilt = self._calculate_pan_tilt(pan_speed, tilt_speed)
 
         success = self._send_continuous_ptz_command(pan, tilt)
+
+        self._current_pan_speed = pan_speed
+        self._current_tilt_speed = tilt_speed
 
         if not success:
             logging.debug("Failed to start continuous PTZ movement.")
@@ -475,6 +487,8 @@ class DS2DY9250IAXA(BaseVendor):
             Exception: If there is an issue while sending the stop command.
         """
         self._send_continuous_ptz_command(0, 0)
+        self._current_pan_speed = 0
+        self._current_tilt_speed = 0
         self._update_status()
 
     def is_initialized(self) -> bool:

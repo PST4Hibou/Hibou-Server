@@ -70,6 +70,8 @@ class PTZController:
         # Remove all cameras
         if name is None:
             for camera_name in list(cls._instances.keys()):
+                PTZController(camera_name).stop_continuous()
                 _release(camera_name)
         else:
+            PTZController(name).stop_continuous()
             _release(name)
