@@ -260,7 +260,11 @@ if __name__ == "__main__":
                     pan_vel, tilt_vel, zoom_vel = controls
 
                     if pan_vel == 0 and tilt_vel == 0:
-                        PTZController("main_camera").stop_continuous()
+                        current_pan_vel, current_tilt_vel = PTZController(
+                            "main_camera"
+                        ).get_speed()
+                        if current_pan_vel != 0 and current_tilt_vel != 0:
+                            PTZController("main_camera").stop_continuous()
                     else:
                         PTZController("main_camera").start_continuous(
                             pan_speed=-pan_vel,

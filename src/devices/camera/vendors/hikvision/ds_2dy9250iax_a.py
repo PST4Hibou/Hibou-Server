@@ -86,6 +86,8 @@ class DS2DY9250IAXA(BaseVendor):
 
         self._last_angle_update_time = 0
 
+        self._status = None
+
         self.rtsp_url = f"rtsp://{username}:{password}@{host}:{rtsp_port}/Streaming/Channels/10{video_channel}/"
         self.rtsp_stream = RtspSource(self.rtsp_url, self._name)
         self.rtsp_stream.start()
@@ -566,6 +568,12 @@ class DS2DY9250IAXA(BaseVendor):
             int: The current absolute zoom level of the camera.
         """
         return self._current_zoom
+
+    def get_speed(self) -> tuple[int, int]:
+        """
+        Return the current pan and tilt speed.
+        """
+        return self._current_pan_speed, self._current_tilt_speed
 
     def get_video_stream(self):
         if not self._initialized:

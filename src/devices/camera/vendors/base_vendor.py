@@ -127,6 +127,10 @@ class BaseVendor(abc.ABC):
         raise NotImplementedError("This vendor does not implement status retrieval.")
 
     @abc.abstractmethod
+    def get_speed(self) -> tuple[int, int]:
+        raise NotImplementedError("This vendor does not implement speed retrieval.")
+
+    @abc.abstractmethod
     def get_video_stream(self):
         """Optional: subclasses can override to provide RTSP or other streams."""
         raise NotImplementedError("This vendor does not implement video streaming.")
