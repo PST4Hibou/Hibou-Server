@@ -1,4 +1,6 @@
 from src.arguments import args
+from typing import Callable
+
 import gi
 
 gi.require_version("Gst", "1.0")
@@ -7,6 +9,13 @@ from gi.repository import Gst
 
 class GStreamerEngine:
     def __init__(self, pipelines_strs: list[str], on_sample):
+        """
+
+        Args:
+            pipelines_strs: The pipelines to build.
+            on_sample (Callable[int, Gst.GstBuffer, bool, int]): Channel ID, data buffer, has discontinuity, PTS. the function called when enough data has been received.
+        """
+
         # Setting GST's logging level to output.
         # see https://gstreamer.freedesktop.org/documentation/tutorials/basic/debugging-tools.html
         Gst.debug_set_default_threshold(args.gst_dbg_level)
@@ -99,7 +108,7 @@ class GStreamerEngine:
 
         try:
             data = buf.extract_dup(0, buf.get_size())
-            self._on_sample(channel_id, data, reset)  # pass raw data upward
+            self._on_sample(channel_id, data, reset, buf.pts)  # pass raw data upward
         except Exception as e:
             # Log error or handle appropriately
             print(f"Error in on_sample callback for channel {channel_id}: {e}")

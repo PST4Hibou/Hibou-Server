@@ -65,6 +65,7 @@ class SourceInterface(ABC):
 
         Args:
             data (list): A list of channel-aligned audio frames.
+            pts (int): The presentation timestamp associated with the audio data.
         """
         if self._callback is not None:
             self._callback(data)
