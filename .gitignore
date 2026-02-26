@@ -212,7 +212,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-assets/computer_vision_models/yolov8n.pt
 *.wav
 *.pt
 runs

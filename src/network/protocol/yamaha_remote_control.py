@@ -1,20 +1,21 @@
-import binascii
 import socket
 import logging
-import struct
-from typing import Sequence
+import time
 
+from typing import Sequence
 from typing_extensions import overload
+from src.network.protocol.yamaha.descriptions import YSDPPacket
+from src.network.protocol.yamaha.discovery import YamahaDiscoverer
+
+
+# For documentation regarding the protocol, please refer to:
+# https://ca.yamaha.com/download/files/2323669
 
 
 class YamahaRemoteControl:
     """
-    This class implements the Yamaha Remote Control protocol.
+    Yamaha Remote Control protocol implementation class.
     """
-
-    ADVERTISING_MCAST_GRP = "239.192.0.64"
-    ADVERTISING_PORT = 54330
-    LOCAL_IP = "0.0.0.0"
 
     def __init__(self, ip: str, port: int = 49280, device_id: int = 0):
         self.ip = ip
@@ -23,6 +24,112 @@ class YamahaRemoteControl:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.settimeout(5)
         self.socket.connect((self.ip, self.port))
+
+        logging.info(f"Waiting for {self.device_id} to be ready.")
+
+        # Wait for the device to be in normal mode.
+        mode = "invalid"
+        exe_status = "0"
+        sys_status = "0"
+        sync_status = "0"
+        muted_status = "0"
+
+        # Spec says to wait at least 1 sec between every request, but truth be told,
+        # even Yamaha (R Remote) does not follow it, so we use a smaller cool down.
+
+        # Wait for the device to be ready to receive messages.
+        while mode != "normal":
+            time.sleep(0.05)
+            result = self.send_command("devstatus runmode")
+            if not result:
+                logging.warning(
+                    "Yamaha Remote Control did not receive a response, retrying..."
+                )
+                continue
+
+            if result.startswith("ERROR"):
+                logging.warning(
+                    f"Yamaha Remote Control received an error response: {result}, retrying..."
+                )
+            elif result.startswith("OK devstatus runmode "):
+                mode = result[len("OK devstatus runmode") :].strip().strip('"')
+                if mode == "emergency":
+                    logging.error(
+                        f"[yamaha_remote_control] Received Device in EMERGENCY mode ({self.device_id}), retrying...)"
+                    )
+                elif mode == "update":
+                    logging.info(
+                        f"Yamaha Remote Control received Device in UPDATE mode ({self.device_id}), retrying...)"
+                    )
+
+        while exe_status != "1":
+            time.sleep(0.05)
+            result = self.send_command("get IO:Current/Dev/ExecMode 0 0")
+
+            if result.startswith("ERROR"):
+                logging.warning(
+                    f"Yamaha Remote Control received an error response: {result[:-1]}, retrying..."
+                )
+            elif result.startswith("OK get IO:Current/Dev/ExecMode 0 0 "):
+                exe_status = result[len("OK get IO:Current/Dev/ExecMode 0 0") :].strip()
+
+        while sys_status != "2":
+            time.sleep(0.05)
+            result = self.send_command("get IO:Current/Dev/SystemStatus 0 0")
+
+            if result.startswith("ERROR"):
+                logging.warning(
+                    f"Yamaha Remote Control received an error response: {result[:-1]}, retrying..."
+                )
+            elif result.startswith("OK get IO:Current/Dev/SystemStatus 0 0 "):
+                sys_status = result[
+                    len("OK get IO:Current/Dev/SystemStatus 0 0") :
+                ].strip()
+
+        # The sync state should be at 2 or 5 here.
+        while sync_status != "2" and sync_status != "5":
+            time.sleep(0.05)
+            result = self.send_command("get IO:Current/Dev/SyncStatus 0 0")
+
+            if result.startswith("ERROR"):
+                logging.warning(
+                    f"Yamaha Remote Control received an error response: {result[:-1]}, retrying..."
+                )
+            elif result.startswith("OK get IO:Current/Dev/SyncStatus 0 0 "):
+                sync_status = result[
+                    len("OK get IO:Current/Dev/SyncStatus 0 0") :
+                ].strip()
+
+        # Disable mute
+        while muted_status != "OFF":
+            time.sleep(0.05)
+            result = self.send_command("set IO:Current/Dev/MuteOn 0 0 0")
+
+            if result.startswith("ERROR"):
+                logging.warning(
+                    f"Yamaha Remote Control received an error response: {result[:-1]}, retrying..."
+                )
+            elif result.startswith("OK set IO:Current/Dev/MuteOn 0 0 0 "):
+                muted_status = (
+                    result[len("OK set IO:Current/Dev/MuteOn 0 0 0 ") :]
+                    .strip()
+                    .strip('"')
+                )
+
+        # After removing mute, our device should go to the sync state no. 5.
+        while sync_status != "5":
+            time.sleep(0.05)
+            result = self.send_command("get IO:Current/Dev/SyncStatus 0 0")
+
+            if result.startswith("ERROR"):
+                logging.warning(
+                    f"Yamaha Remote Control received an error response: {result[:-1]}, retrying..."
+                )
+            elif result.startswith("OK get IO:Current/Dev/SyncStatus 0 0 "):
+                sync_status = result[
+                    len("OK get IO:Current/Dev/SyncStatus 0 0") :
+                ].strip()
+
         logging.info("Yamaha Remote Control connected")
 
     def send_command(self, command: str) -> str | None:
@@ -116,51 +223,10 @@ class YamahaRemoteControl:
         return result.replace("\n", "").split(" ")[-1] == "1"
 
     @staticmethod
-    def scan_devices():
-        """
-        Scan for Yamaha Remote Control devices.
-        For the moment, we only support one device at a time.
-        """
+    def scan_devices(waits=False) -> set[YSDPPacket]:
+        # The discovery starts when the class is instanciated, so access it before waiting.
+        discoverer = YamahaDiscoverer()
+        if waits:
+            time.sleep(1)
 
-        # Construct the payload to advertise for devices
-        payload_hex = "5953445000380004c0a8fa140000000000000000000000000800273de005085f7970612d73637000150659616d61686108522052656d6f74650459303030"
-        payload = binascii.unhexlify(payload_hex)
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-        sock.bind(("", YamahaRemoteControl.ADVERTISING_PORT))
-
-        # Join the multicast group
-        mreq = struct.pack(
-            "4s4s",
-            socket.inet_aton(YamahaRemoteControl.ADVERTISING_MCAST_GRP),
-            socket.inet_aton(YamahaRemoteControl.LOCAL_IP),
-        )
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-        # Avoid receiving the packet I send.
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0)
-        sock.setsockopt(
-            socket.IPPROTO_IP,
-            socket.IP_MULTICAST_IF,
-            socket.inet_aton(YamahaRemoteControl.LOCAL_IP),
-        )
-        sock.settimeout(2.0)
-
-        # Send the payload
-        sock.sendto(
-            payload,
-            (
-                YamahaRemoteControl.ADVERTISING_MCAST_GRP,
-                YamahaRemoteControl.ADVERTISING_PORT,
-            ),
-        )
-
-        try:
-            data, (addr, _) = sock.recvfrom(4096)
-        except socket.timeout:
-            sock.close()
-            return None
-
-        sock.close()
-        return addr, data
+        return discoverer.get_devices()

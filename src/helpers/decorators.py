@@ -1,13 +1,16 @@
 from dataclasses import dataclass
 
 
-def singleton(class_):
-    instances = {}
-    def getinstance(*args, **kwargs):
-        if class_ not in instances:
-            instances[class_] = class_(*args, **kwargs)
-        return instances[class_]
-    return getinstance
+class SingletonMeta(type):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in SingletonMeta._instances:
+            SingletonMeta._instances[cls] = super().__call__(*args, **kwargs)
+        return SingletonMeta._instances[cls]
+
+def singleton(cls):
+    return SingletonMeta(cls.__name__, cls.__bases__, dict(cls.__dict__))
+
 
 @dataclass(frozen=True)
 class Range:

@@ -1,10 +1,10 @@
-from src.devices.audio.controllers.base_controller import BaseController
-from typing import List, Optional
 import logging
 
-from src.devices.audio.dante.models import DanteADCDevice
-from src.devices.audio.dante.scanner import DanteADCScanner
 from src.network.protocol.yamaha_remote_control import YamahaRemoteControl
+from src.devices.audio.controllers.base_controller import BaseController
+from src.devices.audio.dante.scanner import DanteADCScanner
+from src.devices.audio.dante.models import DanteADCDevice
+from typing import List, Optional
 
 
 class YamahaTio1608Controller(BaseController):
@@ -45,9 +45,8 @@ class YamahaTio1608Controller(BaseController):
         Returns:
             YamahaTio1608Controller
         """
-        if not (yamaha_device := YamahaRemoteControl.scan_devices()):
+        if not (yamaha_devices := YamahaRemoteControl.scan_devices(waits=True)):
             return []
         logging.info("Discovered Yamaha Top 1608 Controller")
-        yamaha_controller = cls(yamaha_device[0])
 
-        return [yamaha_controller]
+        return [cls(dev.ip_address) for dev in yamaha_devices.values()]
