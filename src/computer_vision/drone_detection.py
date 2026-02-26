@@ -1,4 +1,5 @@
 from src.computer_vision.video_source import VideoSource
+from .detection_recorder import DetectionRecording
 from ultralytics.engine.results import Results
 from .models.yolo_model import YOLOModel
 from collections import deque
@@ -18,6 +19,8 @@ class DroneDetection:
         model_type: str = "yolo",
         model_path: Path = "yolov8n.pt",
         enable: bool = True,
+        enable_recording: bool = False,
+        save_fp: Path = Path(),
     ):
         if not enable:
             logging.warning("Drone detection disabled.")
@@ -28,6 +31,9 @@ class DroneDetection:
         self._thread: threading.Thread | None = None
         self._stream: VideoSource | None = None
         self._frame_interval = None
+        self.fps = None
+        self.enable_recording = enable_recording
+        self.recording = DetectionRecording(save_fp)
 
         self.results_queue = deque(maxlen=1)
 
@@ -60,10 +66,15 @@ class DroneDetection:
             if any(len(result.boxes) > 0 for result in results):
                 self.results_queue.append(results)
 
-            if display:
+            if self.enable_recording or display:
                 annotated_frame = results[0].plot()
-                cv2.imshow("Tracking", annotated_frame)
-                cv2.waitKey(1)
+
+                if self.enable_recording:
+                    self.recording.update_frame(annotated_frame)
+
+                if display:
+                    cv2.imshow("Tracking", annotated_frame)
+                    cv2.waitKey(1)
 
             sleep_time = next_frame_time - time.time()
 
@@ -97,8 +108,13 @@ class DroneDetection:
 
         self._stream = stream
 
-        fps = self._stream.get_fps()
-        self._frame_interval = 1.0 / fps if fps > 0 else 0.03  # fallback ~30 FPS
+        self.fps = self._stream.get_fps()
+        self._frame_interval = (
+            1.0 / self.fps if self.fps > 0 else 0.03
+        )  # fallback ~30 FPS
+
+        if self.enable_recording:
+            self.recording.start_recording()
 
         self._stop_event.clear()
         self._thread = threading.Thread(
@@ -109,6 +125,7 @@ class DroneDetection:
     def stop(self):
         """Stop the detection thread."""
         self._stop_event.set()
+        self.recording.stop_recording()
         if self._thread:
             self._thread.join(timeout=2)
             self._thread = None
