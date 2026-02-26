@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
     now = datetime.datetime.now()
     recs_folder_name = os.path.join(
-        SETTINGS.REC_SAVE_FP, f"{now.strftime('%d-%m-%Y_%H:%M:%S')}"
+        SETTINGS.REC_SAVE_FP, f"{now.strftime('%Y-%m-%d-%Y_%H:%M:%S')}"
     )
     if args.infer_from_folder:
         audio_source = FileAudioSource(
