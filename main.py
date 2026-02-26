@@ -9,10 +9,8 @@ from src.devices.camera.ptz_controller import PTZController
 from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
 from src.tracking.ibvs_tracker import IBVSTracker
-from src.tracking.pid_tracker import PIDTracker
 from src.audio.debug.radar import RadarPlot
 from src.audio.energy import compute_energy
-from src.helpers.math import map_range
 from src.audio.play import play_sample
 from src.ai.audio import ModelProxy
 from src.doctor import run_doctor
@@ -147,26 +145,6 @@ if __name__ == "__main__":
     )
 
     stream = PTZController("main_camera").get_video_stream()
-
-    # tracker = PIDTracker(
-    #     pan_pid=PIDTracker.PidCoefs(
-    #         kp=30,
-    #         ki=0.0,
-    #         kd=0.3,
-    #         setpoint=0,
-    #         output_limits=(-20, 20),
-    #     ),
-    #     tilt_pid=PIDTracker.PidCoefs(
-    #         kp=10,
-    #         ki=0.0,
-    #         kd=0.03,
-    #         setpoint=0,
-    #         output_limits=(-5, 5),
-    #     ),
-    #     zoom_pid=PIDTracker.PidCoefs(
-    #         kp=5, ki=0.0, kd=0.5, setpoint=0.2, output_limits=(-10, 5)
-    #     ),
-    # )
 
     tracker = IBVSTracker()
 
