@@ -70,15 +70,17 @@ class AudioProcess:
         res = self.model.infer(audio_samples)
 
         i = 0
-        for audio in audio_samples:
+        for audio, pts in audio_samples:
             self.analyzer.push_buffer(
-                AudioBuffer(timestamp=0, channel=i, data=np.array(audio))
+                AudioBuffer(timestamp=pts, channel=i, data=np.array(audio))
             )
             i += 1
         i = 0
         for pred in res:
             self.analyzer.push_inference(
-                InferenceResult(timestamp=0, channel=i, confidence=0, drone=pred)
+                InferenceResult(
+                    timestamp=audio_samples[i][1], channel=i, confidence=0, drone=pred
+                )
             )
             i += 1
 
@@ -233,7 +235,7 @@ if __name__ == "__main__":
             if not audio.is_empty():
                 channels = audio.get_last_channels()
 
-                energies = [compute_energy(ch) for ch in channels]
+                energies = [compute_energy(ch[0]) for ch in channels]
 
                 phi_angle = angle_estimator.estimate(energies)
 

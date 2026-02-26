@@ -20,6 +20,7 @@ class GstreamerSource(Source):
             self.required_buffer_size = (buffer_size // self.alignment) * self.alignment
 
         self._sinks_data = [b"" for _ in range(self.channels_count())]
+        self._sinks_pts = [None for _ in range(self.channels_count())]
 
     @override
     def start(self):
@@ -39,8 +40,8 @@ class GstreamerSource(Source):
             while self._data_queue.has_data() and self._continue:
                 self._emit(self._data_queue.get())
 
-    def _push_data(self, channel_id, data):
-        self._data_queue.put(channel_id, data)
+    def _push_data(self, channel_id: int, data: np.array, pts: int):
+        self._data_queue.put(channel_id, (data, pts))
 
     def channels_count(self):
         return self._engine.channels_count()
@@ -48,13 +49,28 @@ class GstreamerSource(Source):
     def clear_pendings(self):
         self._data_queue.clear()
         self._sinks_data = [b"" for _ in range(self.channels_count())]
+        self._sinks_pts = [None for _ in range(self.channels_count())]
 
-    def set_buffer_size(self, buffer_size):
+    def set_buffer_size(self, buffer_size: int):
         self.required_buffer_size = buffer_size
 
-    def _on_new_sample(self, channel_id: int, data, reset: bool):
+    def _on_new_sample(self, channel_id: int, data, reset: bool, pts: int):
         if reset:  # It may be requested by a discontinuity, or something else.
             self._sinks_data[channel_id] = b""
+            self._sinks_pts[channel_id] = None
+
+        # Store first PTS
+        if self._sinks_pts[channel_id] is None:
+            self._sinks_pts[channel_id] = pts
+        else:
+            expected_pts = self._sinks_pts[channel_id] + (
+                len(self._sinks_data[channel_id]) // self.alignment
+            )
+            if pts != expected_pts:
+                # We need to update the PTS according to the new data, we got a loss somewhere.
+                self._sinks_pts[channel_id] = pts - (
+                    len(self._sinks_data[channel_id]) // self.alignment
+                )
 
         # store data per channel
         self._sinks_data[channel_id] += data
@@ -68,4 +84,9 @@ class GstreamerSource(Source):
 
             # Convert bytes to audio array
             # No need to normalize as the norm is to have the floats normalized.
-            self._push_data(channel_id, bytes_to_audio(buff))
+            self._push_data(
+                channel_id, bytes_to_audio(buff), self._sinks_pts[channel_id]
+            )
+
+            # PTS update
+            self._sinks_pts[channel_id] += self.required_buffer_size // self.alignment
