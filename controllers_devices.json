@@ -3,7 +3,7 @@
         {
             "name": "YamahaTio1608",
             "ip": "192.168.250.15",
-            "ha_gains": [20, 20, 20, 20],
+            "ha_gains": [50, 50, 50, 50],
             "devices": [
                 {
                     "name": "Y001-Yamaha-Tio1608-D2-8f6e69",
