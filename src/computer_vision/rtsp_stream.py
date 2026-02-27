@@ -145,7 +145,7 @@ class RtspSource(VideoSource, VideoRecorder):
             frame = np.frombuffer(
                 map_info.data, dtype=np.uint8, count=h * w * 3
             ).reshape((h, w, 3))
-            self._last_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            self._last_frame = frame
         except Exception as e:
             print(f"Error in on_sample callback for RTSP source: {e}")
         finally:

@@ -21,7 +21,7 @@ class BaseVendor(abc.ABC):
     and implement the abstract methods.
     """
 
-    SPEED_RANGE: Final[Range] = Range(1, 7)
+    SPEED_RANGE: Final[Range] = Range(-10, 10)
     PAN_RANGE: Final[Range] = Range(0, 360)
     TILT_RANGE: Final[Range] = Range(-90, 40)
     ZOOM_RANGE: Final[Range] = Range(1, 20)
@@ -106,9 +106,7 @@ class BaseVendor(abc.ABC):
         )
 
     @abc.abstractmethod
-    def _start_continuous(
-        self, speed: int, axis: str, pan_clockwise: bool, tilt_clockwise: bool
-    ) -> bool:
+    def _start_continuous(self, pan_speed: int, tilt_speed: int) -> bool:
         raise NotImplementedError(
             "This vendor does not implement continuous PTZ motion."
         )
@@ -127,6 +125,10 @@ class BaseVendor(abc.ABC):
     def get_status(self, force_update: bool = False) -> dict:
         """Return the current PTZ camera status."""
         raise NotImplementedError("This vendor does not implement status retrieval.")
+
+    @abc.abstractmethod
+    def get_speed(self) -> tuple[int, int]:
+        raise NotImplementedError("This vendor does not implement speed retrieval.")
 
     @abc.abstractmethod
     def get_video_stream(self):
@@ -185,24 +187,21 @@ class BaseVendor(abc.ABC):
 
     def start_continuous(
         self,
-        speed: int = 5,
-        axis: str = "XY",
-        pan_clockwise: bool = True,
-        tilt_clockwise: bool = True,
+        pan_speed: int = 5,
+        tilt_speed: int = 5,
         clamp: bool = False,
     ):
         if not self.is_initialized():
             raise RuntimeError("Vendor not initialized.")
 
         if clamp:
-            speed = self._clamp_speed(speed)
+            pan_speed = self._clamp_speed(pan_speed)
+            tilt_speed = self._clamp_speed(tilt_speed)
         else:
-            self._validate_speed(speed)
+            self._validate_speed(pan_speed)
+            self._validate_speed(tilt_speed)
 
-        if not self._validate_axis(axis):
-            raise ValueError(f"Invalid axis: {axis}")
-
-        return self._start_continuous(speed, axis, pan_clockwise, tilt_clockwise)
+        return self._start_continuous(pan_speed, tilt_speed)
 
     def set_3d_position(self, start_x, start_y, end_x, end_y) -> bool:
         raise NotImplementedError("This vendor does not implement 3D positioning.")

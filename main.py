@@ -8,7 +8,8 @@ from src.computer_vision.drone_detection import DroneDetection
 from src.devices.camera.ptz_controller import PTZController
 from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
-from src.tracking.pid_tracker import PIDTracker
+from src.tracking.ibvs_tracker import IBVSTracker
+from src.helpers.decorators import SingletonMeta
 from src.audio.debug.radar import RadarPlot
 from src.audio.energy import compute_energy
 from src.audio.play import play_sample
@@ -24,6 +25,7 @@ from time import sleep
 
 import datetime
 import logging
+import time
 import os
 
 
@@ -70,6 +72,7 @@ class AudioProcess:
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     apply_arguments()
 
     logger.debug(f"Loaded settings: {SETTINGS}")
@@ -89,7 +92,7 @@ if __name__ == "__main__":
 
     now = datetime.datetime.now()
     recs_folder_name = os.path.join(
-        SETTINGS.REC_SAVE_FP, f"{now.strftime('%d-%m-%Y_%H:%M:%S')}"
+        SETTINGS.REC_SAVE_FP, f"{now.strftime('%Y-%m-%d_%H:%M:%S')}"
     )
     if args.infer_from_folder:
         audio_source = FileAudioSource(
@@ -117,6 +120,8 @@ if __name__ == "__main__":
         enable=SETTINGS.AI_CV_ENABLE,
         model_type=SETTINGS.AI_CV_MODEL_TYPE,
         model_path=Path("assets/computer_vision_models/", SETTINGS.AI_CV_MODEL),
+        enable_recording=SETTINGS.REC_VIDEO_ENABLE,
+        save_fp=Path(recs_folder_name, "main_camera_box.avi"),
     )
 
     PTZController(
@@ -137,32 +142,14 @@ if __name__ == "__main__":
     # )
 
     PTZController("main_camera").set_absolute_ptz_position(
-        pan=160,
-        tilt=20,
+        pan=180,
+        tilt=10,
         zoom=1,
     )
 
     stream = PTZController("main_camera").get_video_stream()
 
-    tracker = PIDTracker(
-        pan_pid=PIDTracker.PidCoefs(
-            kp=30,
-            ki=0.0,
-            kd=0.3,
-            setpoint=0,
-            output_limits=(-20, 20),
-        ),
-        tilt_pid=PIDTracker.PidCoefs(
-            kp=10,
-            ki=0.0,
-            kd=0.03,
-            setpoint=0,
-            output_limits=(-5, 5),
-        ),
-        zoom_pid=PIDTracker.PidCoefs(
-            kp=5, ki=0.0, kd=0.5, setpoint=0.2, output_limits=(-10, 5)
-        ),
-    )
+    tracker = IBVSTracker()
 
     nb_channels = sum([x.nb_channels for x in devices])
     if nb_channels == 0:
@@ -224,36 +211,46 @@ if __name__ == "__main__":
             if energy_spectrum_plot:
                 energy_spectrum_plot.update()
 
+            # Drone detection logic
             results = drone_detector.get_last_results()
+            best_box = None
+            best_conf = 0.0
 
             if results is not None:
                 for result in results:
                     if result is None:
                         continue
-                    if not "drone" in result.names.values():
-                        continue
 
                     boxes = result.boxes
                     for box, cls_id, conf in zip(boxes.xyxyn, boxes.cls, boxes.conf):
                         class_id = int(cls_id.item())
-                        if class_id != 0:  # Skip if not a drone
+
+                        # Only drone class (assuming 0 = drone)
+                        if class_id != 0:
                             continue
-                        x1, y1, x2, y2 = box
-                        box_center_x = (x1 + x2) / 2
-                        box_center_y = (y1 + y2) / 2
 
-                        controls = tracker.update(box)
+                        confidence = float(conf.item())
+                        if confidence > best_conf:
+                            best_conf = confidence
+                            best_box = box
 
-                        is_center = (
-                            abs(0.5 - box_center_x) < 0.1
-                            and abs(0.5 - box_center_y) < 0.1
-                        )
+            if time.time() - start_time > 5:
+                controls = tracker.update(best_box)
 
-                        # print(controls)
-                        PTZController("main_camera").set_relative_ptz_position(
-                            pan=controls[0],
-                            tilt=controls[1],
-                            zoom=controls[2] if is_center else None,
+                if controls is not None:
+                    pan_vel, tilt_vel, zoom_vel = controls
+
+                    if pan_vel == 0 and tilt_vel == 0:
+                        current_pan_vel, current_tilt_vel = PTZController(
+                            "main_camera"
+                        ).get_speed()
+                        if current_pan_vel != 0 or current_tilt_vel != 0:
+                            PTZController("main_camera").stop_continuous()
+                    else:
+                        PTZController("main_camera").start_continuous(
+                            pan_speed=-pan_vel,
+                            tilt_speed=tilt_vel,
+                            clamp=True,
                         )
 
     except KeyboardInterrupt:
@@ -263,3 +260,4 @@ if __name__ == "__main__":
         drone_detector.stop()
         PTZController.remove()
         audio_source.stop()
+        SingletonMeta.clear()
