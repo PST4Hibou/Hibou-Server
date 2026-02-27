@@ -50,6 +50,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+controllers_devices.json
 
 # Translations
 *.mo
