@@ -22,9 +22,9 @@ class DroneDetection:
         enable_recording: bool = False,
         save_fp: Path = Path(),
     ):
-        if not enable:
+        self.enable = enable
+        if not self.enable:
             logging.warning("Drone detection disabled.")
-            return
         self.model = YOLOModel(model_path)
         self.channels = self.model.model.yaml.get("channels")
         self._stop_event = threading.Event()
@@ -100,7 +100,7 @@ class DroneDetection:
 
     def start(self, stream: VideoSource, display: bool = True):
         """Start detection in a background thread."""
-        if not self.model:
+        if not self.model or not self.enable:
             return
         if self._thread and self._thread.is_alive():
             logging.warning("Detection already running.")
@@ -124,6 +124,8 @@ class DroneDetection:
 
     def stop(self):
         """Stop the detection thread."""
+        if not self.enable:
+            return
         self._stop_event.set()
         self.recording.stop_recording()
         if self._thread:
@@ -136,5 +138,7 @@ class DroneDetection:
 
     def __del__(self):
         """Ensure resources are cleaned up on destruction."""
+        if not self.enable:
+            return
         self.stop()
         cv2.destroyAllWindows()
