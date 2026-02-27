@@ -9,6 +9,7 @@ from src.devices.camera.ptz_controller import PTZController
 from src.audio.sources.file_source import FileAudioSource
 from src.audio.sources.rtp_source import RTPAudioSource
 from src.tracking.ibvs_tracker import IBVSTracker
+from src.helpers.decorators import SingletonMeta
 from src.audio.debug.radar import RadarPlot
 from src.audio.energy import compute_energy
 from src.audio.play import play_sample
@@ -259,3 +260,4 @@ if __name__ == "__main__":
         drone_detector.stop()
         PTZController.remove()
         audio_source.stop()
+        SingletonMeta.clear()
