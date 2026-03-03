@@ -4,7 +4,7 @@ import numpy as np
 
 
 class AngleOfArrivalEstimator:
-    def __init__(self, nb_channels, angle_coverage=360, smoothing=0.8):
+    def __init__(self, nb_channels, angle_coverage=60, smoothing=0.8):
         self.nb_channels = nb_channels
         self.angle_coverage = angle_coverage
         self.smoothing = smoothing
