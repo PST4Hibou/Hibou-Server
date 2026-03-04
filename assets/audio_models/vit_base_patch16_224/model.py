@@ -110,7 +110,7 @@ class VitAudioModel:
                 logits = self.model(input)
                 predictions.append(torch.sigmoid(logits).cpu().squeeze(0).squeeze(0))
 
-        return [pred >= self.threshold for pred in predictions]
+        return [pred >= self.threshold for pred in predictions], predictions
 
 
 Model = lambda: VitAudioModel()
