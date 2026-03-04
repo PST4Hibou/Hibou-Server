@@ -7,8 +7,8 @@ from typing import override
 import numpy as np
 import math
 
-num_mics = 2
-angles = [30, 60]
+num_mics = 3
+angles = [30, 60, 90]
 
 SPEED_OF_SOUND = 343.0
 # TODO: use micro positioning
@@ -38,13 +38,13 @@ class Analyzer(AudioAnalyzer):
 
     @override
     def push_buffer(self, buffer: AudioBuffer):
-        if buffer.channel > 1:
+        if buffer.channel > num_mics - 1:
             return
         self.audio_buffers[buffer.channel] = buffer.data
 
     @override
     def push_inference(self, inference: InferenceResult):
-        if inference.channel > 1:
+        if inference.channel > num_mics - 1:
             return
         self.inference_results[inference.channel] = inference.drone
 
@@ -85,20 +85,20 @@ class Analyzer(AudioAnalyzer):
         if len(self.audio_buffers) != num_mics:
             raise ValueError("Not enough audio")
 
+        print()
         # Skip when no drone is detected
         # TODO:
-        if len(self.inference_results) == num_mics and not any(
-            self.inference_results[i] for i in range(num_mics)
-        ):
+        if not any(self.inference_results[i] for i in range(num_mics)):
             print("No drone detected")
             return None
 
         signals = [self.audio_buffers[i] for i in range(num_mics)]
         tdoas = self.compute_tdoa_vector(signals, interp=1, fs=self.sample_rate)
-
+        print(tdoas)
         # use TDOA of mic 1 relative to mic 0
         tau = tdoas[1]
         theta = self._tdoa_to_angle(tau)
+        print(theta)
 
         # map to global azimuth (0–360°): array orientation + angle from normal
         azimuth = (self.array_orientation + theta) % 360
