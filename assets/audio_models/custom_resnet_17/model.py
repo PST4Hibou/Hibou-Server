@@ -171,10 +171,8 @@ class CustomResnet17AudioModel:
         inputs = preprocess(audios)
         with torch.no_grad():
             logits = self.model(inputs)
-            # print(logits)
             predictions = torch.sigmoid(logits).squeeze(1).cpu().numpy()
-            print(predictions)
-            return predictions >= self.threshold
+            return predictions >= self.threshold, predictions
 
 
 Model = lambda: CustomResnet17AudioModel()
