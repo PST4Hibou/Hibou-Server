@@ -4,6 +4,7 @@ import os
 from collections import deque
 
 from src.arguments import args
+from src.helpers.decorators import SingletonMeta
 from src.logger import logger
 from src.modules.audio.devices.audio_device_controller import ADCControllerManager
 from src.modules.audio.dispatcher import AudioDispatcher
@@ -34,6 +35,7 @@ class AudioWorker:
             logger.critical("Stopping Audio Worker...")
         finally:
             self.source.stop()
+            SingletonMeta.clear()
 
     def _load_devices(self):
         """
