@@ -69,8 +69,8 @@ class DroneDetection:
             if self.enable_recording or display:
                 annotated_frame = results[0].plot()
 
-                # if self.enable_recording:
-                #     self.recording.update_frame(annotated_frame)
+                if self.enable_recording:
+                    self.recording.update_frame(annotated_frame)
 
                 if display:
                     cv2.imshow("Tracking", annotated_frame)
