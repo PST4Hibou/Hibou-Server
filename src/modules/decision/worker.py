@@ -1,5 +1,7 @@
 import time
-from src.logger import logger
+from src.logger import CustomLogger
+
+logger = CustomLogger("decision").get_logger()
 import os
 
 

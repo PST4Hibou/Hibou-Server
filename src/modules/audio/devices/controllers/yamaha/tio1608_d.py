@@ -1,4 +1,6 @@
-import logging
+from src.logger import CustomLogger
+
+logger = CustomLogger("audio").get_logger()
 
 from src.modules.audio.protocols.yamaha_remote_control.yamaha_remote_control import (
     YamahaRemoteControl,
@@ -23,9 +25,9 @@ class YamahaTio1608Controller(BaseController):
         self.yamaha_remote_control = YamahaRemoteControl(ip)
 
         if not self.yamaha_remote_control.is_general_phantom_power_activated():
-            logging.warning("YamahaTio1608 phantom power is not activated")
+            logger.warning("YamahaTio1608 phantom power is not activated")
         else:
-            logging.info("YamahaTio1608 phantom power activated")
+            logger.info("YamahaTio1608 phantom power activated")
             self.yamaha_remote_control.set_phantom_power(
                 [i for i in range(0, 16)], [1] * 16
             )
@@ -49,6 +51,6 @@ class YamahaTio1608Controller(BaseController):
         """
         if not (yamaha_devices := YamahaRemoteControl.scan_devices(waits=True)):
             return []
-        logging.info("Discovered Yamaha Top 1608 Controller")
+        logger.info("Discovered Yamaha Top 1608 Controller")
 
         return [cls(dev.ip_address) for dev in yamaha_devices.values()]

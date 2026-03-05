@@ -2,7 +2,10 @@ from src.modules.vision.devices.vendors.base_vendor import BaseVendor
 from src.modules.vision.streaming.rtsp_stream import RtspSource
 
 import threading
-import logging
+
+from src.logger import CustomLogger
+
+logger = CustomLogger("vision").get_logger()
 
 
 class OpenCVStreamingVendor(BaseVendor):
@@ -39,9 +42,9 @@ class OpenCVStreamingVendor(BaseVendor):
         self._cap.start()
 
         if not self._cap.is_opened():
-            logging.error("Cannot open stream.")
+            logger.error("Cannot open stream.")
         else:
-            logging.info("Computer initialized successfully.")
+            logger.info("Computer initialized successfully.")
 
     @classmethod
     def get_instance(cls) -> "OpenCVStreamingVendor":
@@ -55,7 +58,7 @@ class OpenCVStreamingVendor(BaseVendor):
     def _ensure_client_initialized(self) -> bool:
         """Check if the capture client is initialized and log an error if not."""
         if not self._cap:
-            logging.error("PTZ client not initialized.")
+            logger.error("PTZ client not initialized.")
             return False
         return True
 
@@ -69,4 +72,4 @@ class OpenCVStreamingVendor(BaseVendor):
         if hasattr(self, "_cap") and self._cap is not None:
             self._cap.stop()
             self._cap = None
-            logging.info("Capture released.")
+            logger.info("Capture released.")

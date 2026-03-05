@@ -1,7 +1,9 @@
 from src.modules.vision.devices.vendors.base_vendor import BaseVendor
 from typing import Type
 
-import logging
+from src.logger import CustomLogger
+
+logger = CustomLogger("vision").get_logger()
 
 
 class PTZController:
@@ -31,7 +33,7 @@ class PTZController:
             )
 
         # Create new PTZ device instance
-        logging.info(
+        logger.info(
             f"Initializing new PTZ camera '{name}' using {vendor_class.__name__}"
         )
         ptz_instance = vendor_class(name, *args, **kwargs)
@@ -59,13 +61,13 @@ class PTZController:
         def _release(camera_name: str) -> None:
             ptz = cls._instances.pop(camera_name, None)
             if not ptz:
-                logging.warning(f"Camera '{camera_name}' not found.")
+                logger.warning(f"Camera '{camera_name}' not found.")
                 return
 
             if hasattr(ptz, "release_stream"):
                 ptz.release_stream()
 
-            logging.info(f"Camera '{camera_name}' released and unregistered.")
+            logger.info(f"Camera '{camera_name}' released and unregistered.")
 
         # Remove all cameras
         if name is None:

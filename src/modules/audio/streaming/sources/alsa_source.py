@@ -1,7 +1,9 @@
-import logging
 import os
 
+from src.logger import CustomLogger, blank_line_module
 from src.modules.audio.streaming.sources.gstreamer_source import GstreamerSource
+
+logger = CustomLogger("audio").get_logger()
 from src.settings import SETTINGS
 
 
@@ -22,8 +24,8 @@ class AlsaAudioSource(GstreamerSource):
 
         pipeline_strings = []
 
-        logging.blank_line()
-        logging.debug("Gstreamer pipeline:")
+        blank_line_module()
+        logger.debug("Gstreamer pipeline:")
 
         channel = 0
         gst_pipeline_str = (
@@ -31,7 +33,7 @@ class AlsaAudioSource(GstreamerSource):
             f"tee name=t0 t0. ! queue ! appsink name=appsink_{channel} "
         )
 
-        logging.debug(gst_pipeline_str)
+        logger.debug(gst_pipeline_str)
 
         if enable_recording_saves:
             os.makedirs(f"{save_fp}/", exist_ok=True)

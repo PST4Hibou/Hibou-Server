@@ -5,8 +5,11 @@ from src.helpers.math import map_range
 from hikvisionapi import Client
 
 import threading
-import logging
 import time
+
+from src.logger import CustomLogger
+
+logger = CustomLogger("vision").get_logger()
 
 
 class DS2DY9250IAXA(BaseVendor):
@@ -57,7 +60,7 @@ class DS2DY9250IAXA(BaseVendor):
             return
 
         if not host or not username or not password:
-            logging.warning(
+            logger.warning(
                 "No username or password provided for PTZ connection. Skipping initialization."
             )
             self._initialized = False
@@ -93,20 +96,20 @@ class DS2DY9250IAXA(BaseVendor):
         self.rtsp_stream.start()
 
         if not self.rtsp_stream.is_opened():
-            logging.error("❌ Cannot open RTSP stream. Check the URL or credentials.")
-            logging.error(
+            logger.error("❌ Cannot open RTSP stream. Check the URL or credentials.")
+            logger.error(
                 f"RTSP URL: rtsp://{username}:XXX@{host}:{rtsp_port}/Streaming/Channels/10{video_channel}/"
             )
         else:
-            logging.info("RTSP stream opened")
+            logger.info("RTSP stream opened")
 
         try:
             self._client = Client(
                 f"http://{self._host}", self._username, self._password
             )
-            logging.info(f"✅ Connected to PTZ camera at {self._host}")
+            logger.info(f"✅ Connected to PTZ camera at {self._host}")
         except Exception as e:
-            logging.error(f"❌ Failed to connect to PTZ camera at {self._host}: {e}")
+            logger.error(f"❌ Failed to connect to PTZ camera at {self._host}: {e}")
 
     @staticmethod
     def _build_absolute_position_xml(
@@ -339,7 +342,7 @@ class DS2DY9250IAXA(BaseVendor):
             return True
 
         except Exception as e:
-            logging.error(f"Error sending PTZ absolute command: {e}")
+            logger.error(f"Error sending PTZ absolute command: {e}")
             return False
 
     def _set_relative_ptz_position(
@@ -408,7 +411,7 @@ class DS2DY9250IAXA(BaseVendor):
             return True
 
         except Exception as e:
-            logging.error(f"Error sending PTZ continuous command: {e}")
+            logger.error(f"Error sending PTZ continuous command: {e}")
             return False
 
     def _start_continuous(self, pan_speed: int, tilt_speed: int) -> bool:
@@ -450,7 +453,7 @@ class DS2DY9250IAXA(BaseVendor):
         self._current_tilt_speed = tilt_speed
 
         if not success:
-            logging.debug("Failed to start continuous PTZ movement.")
+            logger.debug("Failed to start continuous PTZ movement.")
         return success
 
     def _update_status(self) -> None:
@@ -475,7 +478,7 @@ class DS2DY9250IAXA(BaseVendor):
             )
             self._status = status
         except Exception as e:
-            logging.error(f"Failed to get PTZ status: {e}")
+            logger.error(f"Failed to get PTZ status: {e}")
 
     def stop_continuous(self) -> None:
         """
@@ -553,7 +556,7 @@ class DS2DY9250IAXA(BaseVendor):
             return True
 
         except Exception as e:
-            logging.error(f"Error sending PTZ continuous command: {e}")
+            logger.error(f"Error sending PTZ continuous command: {e}")
             return False
 
     def get_zoom(self) -> int:
@@ -585,4 +588,4 @@ class DS2DY9250IAXA(BaseVendor):
         if hasattr(self, "rtsp_stream") and self.rtsp_stream is not None:
             self.rtsp_stream.stop()
             self.rtsp_stream = None
-            logging.info("📷 RTSP stream released.")
+            logger.info("📷 RTSP stream released.")

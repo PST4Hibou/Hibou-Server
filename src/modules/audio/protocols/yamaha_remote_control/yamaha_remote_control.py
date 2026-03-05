@@ -1,8 +1,10 @@
 import socket
-import logging
 import time
 
+from src.logger import CustomLogger
 from typing import Sequence
+
+logger = CustomLogger("audio").get_logger()
 from typing_extensions import overload
 from src.modules.audio.protocols.yamaha_remote_control.descriptions import YSDPPacket
 from src.modules.audio.protocols.yamaha_remote_control.discovery import YamahaDiscoverer
@@ -25,7 +27,7 @@ class YamahaRemoteControl:
         self.socket.settimeout(5)
         self.socket.connect((self.ip, self.port))
 
-        logging.info(f"Waiting for {self.device_id} to be ready.")
+        logger.info(f"Waiting for {self.device_id} to be ready.")
 
         # Wait for the device to be in normal mode.
         mode = "invalid"
@@ -42,23 +44,23 @@ class YamahaRemoteControl:
             time.sleep(0.05)
             result = self.send_command("devstatus runmode")
             if not result:
-                logging.warning(
+                logger.warning(
                     "Yamaha Remote Control did not receive a response, retrying..."
                 )
                 continue
 
             if result.startswith("ERROR"):
-                logging.warning(
+                logger.warning(
                     f"Yamaha Remote Control received an error response: {result}, retrying..."
                 )
             elif result.startswith("OK devstatus runmode "):
                 mode = result[len("OK devstatus runmode") :].strip().strip('"')
                 if mode == "emergency":
-                    logging.error(
+                    logger.error(
                         f"[yamaha_remote_control] Received Device in EMERGENCY mode ({self.device_id}), retrying...)"
                     )
                 elif mode == "update":
-                    logging.info(
+                    logger.info(
                         f"Yamaha Remote Control received Device in UPDATE mode ({self.device_id}), retrying...)"
                     )
 
@@ -67,7 +69,7 @@ class YamahaRemoteControl:
             result = self.send_command("get IO:Current/Dev/ExecMode 0 0")
 
             if result.startswith("ERROR"):
-                logging.warning(
+                logger.warning(
                     f"Yamaha Remote Control received an error response: {result[:-1]}, retrying..."
                 )
             elif result.startswith("OK get IO:Current/Dev/ExecMode 0 0 "):
@@ -78,7 +80,7 @@ class YamahaRemoteControl:
             result = self.send_command("get IO:Current/Dev/SystemStatus 0 0")
 
             if result.startswith("ERROR"):
-                logging.warning(
+                logger.warning(
                     f"Yamaha Remote Control received an error response: {result[:-1]}, retrying..."
                 )
             elif result.startswith("OK get IO:Current/Dev/SystemStatus 0 0 "):
@@ -92,7 +94,7 @@ class YamahaRemoteControl:
             result = self.send_command("get IO:Current/Dev/SyncStatus 0 0")
 
             if result.startswith("ERROR"):
-                logging.warning(
+                logger.warning(
                     f"Yamaha Remote Control received an error response: {result[:-1]}, retrying..."
                 )
             elif result.startswith("OK get IO:Current/Dev/SyncStatus 0 0 "):
@@ -106,7 +108,7 @@ class YamahaRemoteControl:
             result = self.send_command("set IO:Current/Dev/MuteOn 0 0 0")
 
             if result.startswith("ERROR"):
-                logging.warning(
+                logger.warning(
                     f"Yamaha Remote Control received an error response: {result[:-1]}, retrying..."
                 )
             elif result.startswith("OK set IO:Current/Dev/MuteOn 0 0 0 "):
@@ -122,7 +124,7 @@ class YamahaRemoteControl:
             result = self.send_command("get IO:Current/Dev/SyncStatus 0 0")
 
             if result.startswith("ERROR"):
-                logging.warning(
+                logger.warning(
                     f"Yamaha Remote Control received an error response: {result[:-1]}, retrying..."
                 )
             elif result.startswith("OK get IO:Current/Dev/SyncStatus 0 0 "):
@@ -130,7 +132,7 @@ class YamahaRemoteControl:
                     len("OK get IO:Current/Dev/SyncStatus 0 0") :
                 ].strip()
 
-        logging.info("Yamaha Remote Control connected")
+        logger.info("Yamaha Remote Control connected")
 
     def send_command(self, command: str) -> str | None:
         """
@@ -149,7 +151,7 @@ class YamahaRemoteControl:
                 return result.decode()
 
         except Exception as e:
-            logging.error(
+            logger.error(
                 f"[yamaha_remote_control] Error sending command: {command}, error: {e}"
             )
 
@@ -178,7 +180,7 @@ class YamahaRemoteControl:
             command = f"set IO:Current/InCh/48VOn {channel} {self.device_id} {state}"
             self.send_command(command)
 
-        logging.info(
+        logger.info(
             f"Yamaha Remote Control set phantom power channels: {channels} state: {states}"
         )
 
@@ -205,7 +207,7 @@ class YamahaRemoteControl:
             command = f"set IO:Current/InCh/HAGain {channel} {self.device_id} {state}"
             self.send_command(command)
 
-        logging.info(
+        logger.info(
             f"Yamaha Remote Control set hagain channels: {channels} state: {states}"
         )
 

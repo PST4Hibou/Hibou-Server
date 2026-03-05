@@ -1,9 +1,10 @@
 import time
 
-from src.doctor import run_doctor
+# from src.doctor import run_doctor
 from src.helpers.decorators import SingletonMeta
 from src.helpers.process_manager import managed_processes
-from src.logger import logger, update_log_level, update_global_log_level
+from src.logger import CustomLogger
+
 from src.modules.audio.worker import AudioWorker
 from src.modules.decision.worker import DecisionWorker
 from src.modules.vision.worker import VisionWorker
@@ -18,12 +19,14 @@ def apply_arguments():
         SETTINGS.INFER_FROM_FOLDER = args.infer_from_folder
     if args.log_level:
         SETTINGS.LOG_LEVEL = args.log_level
-    update_log_level()
-    update_global_log_level()
+    # update_log_level()
+    # update_global_log_level()
+    #
+    # if args.doctor:
+    #     run_doctor()
 
-    if args.doctor:
-        run_doctor()
 
+logger = CustomLogger("main").get_logger()
 
 if __name__ == "__main__":
     start_time = time.time()
@@ -37,7 +40,7 @@ if __name__ == "__main__":
             [
                 AudioWorker,
                 VisionWorker,
-                # DecisionWorker
+                DecisionWorker,
             ]
         ):
             pass

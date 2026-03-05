@@ -1,8 +1,10 @@
 import asyncio
-import logging
 from typing import List
 
+from src.logger import CustomLogger
 from netaudio import DanteBrowser, DanteDevice
+
+logger = CustomLogger("audio").get_logger()
 
 from src.modules.audio.devices.dante.models import DanteADCDevice
 from src.helpers.network.interface import get_interface_from_ipv4
@@ -16,7 +18,7 @@ class DanteADCScanner:
         try:
             return asyncio.run(async_fn())
         except Exception as e:
-            logging.exception("Error while running asyncio function: %s", e)
+            logger.exception("Error while running asyncio function: %s", e)
             return []
 
     @staticmethod
@@ -26,22 +28,22 @@ class DanteADCScanner:
         discovered = await dante_browser.get_devices()
 
         if not discovered:
-            logging.warning("No Dante devices discovered.")
+            logger.warning("No Dante devices discovered.")
             return []
 
         await asyncio.gather(*(device.get_controls() for device in discovered.values()))
 
         devices = list(discovered.values())
-        logging.info("Discovered %d Dante devices", len(devices))
+        logger.info("Discovered %d Dante devices", len(devices))
         return devices
 
     @classmethod
     def scan_devices(cls, model_id: str = None) -> List[DanteADCDevice]:
         """Synchronous wrapper for asynchronous Dante discovery."""
-        logging.debug("Starting device discovery for Yamaha Tio1608-D.")
+        logger.debug("Starting device discovery for Yamaha Tio1608-D.")
         dante_devices = cls._run(cls._scan_devices)
         if not dante_devices:
-            logging.warning("No devices returned from discovery.")
+            logger.warning("No devices returned from discovery.")
             return []
 
         if model_id:
@@ -49,7 +51,7 @@ class DanteADCScanner:
                 filter(lambda d: d.model_id == model_id, dante_devices)
             )
         converted_devices = [cls.to_device(d) for d in dante_devices]
-        logging.info(
+        logger.info(
             "Converted %d Dante devices to internal Device objects for %s",
             len(converted_devices),
             model_id,

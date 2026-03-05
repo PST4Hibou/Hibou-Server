@@ -6,8 +6,11 @@ from collections import deque
 from pathlib import Path
 
 import threading
-import logging
 import time
+
+from src.logger import CustomLogger
+
+logger = CustomLogger("vision").get_logger()
 import cv2
 
 
@@ -24,7 +27,7 @@ class DroneDetection:
     ):
         self.enable = enable
         if not self.enable:
-            logging.warning("Drone detection disabled.")
+            logger.warning("Drone detection disabled.")
         self.model = YOLOModel(model_path)
         self.channels = self.model.model.yaml.get("channels")
         self._stop_event = threading.Event()
@@ -37,15 +40,15 @@ class DroneDetection:
 
         self.results_queue = deque(maxlen=1)
 
-        logging.info(f"DroneDetection initialized with model: {model_type}")
+        logger.info(f"DroneDetection initialized with model: {model_type}")
 
     def _run_detection(self, display: bool = True):
         """Internal method running detection loop in a thread."""
         if self._stream is None or not self._stream.is_opened():
-            logging.error("Invalid stream")
+            logger.error("Invalid stream")
             return
 
-        logging.info("Detection loop started")
+        logger.info("Detection loop started")
 
         next_frame_time = time.time()
         while not self._stop_event.is_set():
@@ -84,7 +87,7 @@ class DroneDetection:
                 # we're behind schedule -> reset timing
                 next_frame_time = time.time()
 
-        logging.info("Detection loop ended")
+        logger.info("Detection loop ended")
         cv2.destroyAllWindows()
 
     def get_last_results(self) -> list[Results] | None:
@@ -101,10 +104,10 @@ class DroneDetection:
     def start(self, stream: VideoSource, display: bool = True):
         """Start detection in a background thread."""
         if not self.model or not self.enable:
-            logging.warning("Model not loaded or detection disabled.")
+            logger.warning("Model not loaded or detection disabled.")
             return
         if self._thread and self._thread.is_alive():
-            logging.warning("Detection already running.")
+            logger.warning("Detection already running.")
             return
 
         self._stream = stream

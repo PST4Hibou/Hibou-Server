@@ -5,7 +5,9 @@ from src.helpers.network.networks import get_networks
 from src.helpers.network.ping import ping
 from src.settings import SETTINGS
 from rich.console import Console
-from src.logger import logger
+from src.logger import CustomLogger
+
+logger = CustomLogger("doctor").get_logger()
 from rich.table import Table
 from rich.text import Text
 

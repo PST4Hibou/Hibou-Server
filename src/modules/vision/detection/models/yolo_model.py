@@ -1,8 +1,11 @@
 from ultralytics import YOLO
 from pathlib import Path
 
-import logging
 import torch
+
+from src.logger import CustomLogger
+
+logger = CustomLogger("vision").get_logger()
 
 
 class YOLOModel:
@@ -11,13 +14,13 @@ class YOLOModel:
     def __init__(self, model_path: Path):
         try:
             self.model = YOLO(model_path)
-            logging.info(f"✅ Loaded YOLO model: {model_path}")
+            logger.info(f"✅ Loaded YOLO model: {model_path}")
 
             device = "cuda" if torch.cuda.is_available() else "cpu"
             self.model.to(device)
-            logging.info(f"YOLO Using device: {device}")
+            logger.info(f"YOLO Using device: {device}")
         except Exception as e:
-            logging.error(f"❌ Failed to load YOLO model: {e}")
+            logger.error(f"❌ Failed to load YOLO model: {e}")
             raise
 
     def track(self, frame):

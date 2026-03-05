@@ -1,7 +1,9 @@
-import logging
 import os
 
+from src.logger import CustomLogger, blank_line_module
 from src.modules.audio.streaming.sources.gstreamer_source import GstreamerSource
+
+logger = CustomLogger("audio").get_logger()
 from src.modules.audio.devices.dante.models import DanteADCDevice
 from src.settings import SETTINGS
 
@@ -57,8 +59,8 @@ class RTPAudioSource(GstreamerSource):
 
         pipeline_strings = []
 
-        logging.blank_line()
-        logging.debug("Gstreamer pipeline:")
+        blank_line_module()
+        logger.debug("Gstreamer pipeline:")
 
         channel = 0
         for dev in self.devices:
@@ -104,7 +106,7 @@ class RTPAudioSource(GstreamerSource):
 
                 gst_pipeline_str += record_branches
 
-            logging.debug(gst_pipeline_str)
+            logger.debug(gst_pipeline_str)
 
             pipeline_strings.append(gst_pipeline_str)
             channel += nb_channels

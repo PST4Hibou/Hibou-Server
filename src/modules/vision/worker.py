@@ -2,7 +2,9 @@ import time
 import datetime
 from pathlib import Path
 
-from src.logger import logger
+from src.logger import CustomLogger
+
+logger = CustomLogger("vision").get_logger()
 import os
 from src.modules.vision.detection import DroneDetection
 from src.modules.vision.devices.ptz_controller import PTZController

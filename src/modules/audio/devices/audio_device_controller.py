@@ -1,5 +1,8 @@
-import logging
 from dataclasses import asdict
+
+from src.logger import CustomLogger, blank_line_module
+
+logger = CustomLogger("audio").get_logger()
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -59,12 +62,12 @@ class ADCControllerManager:
         for controller_data in controllers_data:
             controller_name = controller_data.get("name")
             if not controller_name:
-                logging.warning("Skipping controller entry without name field")
+                logger.warning("Skipping controller entry without name field")
                 continue
 
             controller_class = controller_map.get(controller_name)
             if not controller_class:
-                logging.warning(
+                logger.warning(
                     f"Unknown controller type '{controller_name}'. Supported types: {list(controller_map.keys())}"
                 )
                 continue
@@ -74,7 +77,7 @@ class ADCControllerManager:
                     # AvioAi2Controller takes a list of DanteADCDevice instances
                     devices_data = controller_data.get("devices", [])
                     if not devices_data:
-                        logging.warning(
+                        logger.warning(
                             f"No devices found for controller {controller_name}"
                         )
                         continue
@@ -82,7 +85,7 @@ class ADCControllerManager:
                     dante_devices = [DanteADCDevice(**dev) for dev in devices_data]
                     controller = AvioAi2Controller(dante_devices)
                     loaded_controllers.append(controller)
-                    logging.info(
+                    logger.info(
                         f"Loaded {controller_name} controller with {len(dante_devices)} devices"
                     )
 
@@ -96,7 +99,7 @@ class ADCControllerManager:
                         if devices_data and len(devices_data) > 0:
                             ip = devices_data[0].get("ipv4")
                         if not ip:
-                            logging.warning(
+                            logger.warning(
                                 f"No IP address found for {controller_name} controller"
                             )
                             continue
@@ -111,34 +114,34 @@ class ADCControllerManager:
                     if devices_data:
                         dante_devices = [DanteADCDevice(**dev) for dev in devices_data]
                         controller.adc_devices = dante_devices
-                        logging.info(
+                        logger.info(
                             f"Loaded {controller_name} controller with IP {ip} and {len(dante_devices)} devices from file"
                         )
                     else:
-                        logging.warning(
+                        logger.warning(
                             f"No devices found for {controller_name} controller"
                         )
 
                     loaded_controllers.append(controller)
 
             except Exception as e:
-                logging.exception(f"Failed to load controller {controller_name}: {e}")
+                logger.exception(f"Failed to load controller {controller_name}: {e}")
                 continue
 
         if not loaded_controllers:
-            logging.warning(
+            logger.warning(
                 "No controllers were successfully loaded from the configuration file."
             )
 
         self.controllers = loaded_controllers
-        logging.info(f"Loaded {len(loaded_controllers)} controllers from {json_path}")
+        logger.info(f"Loaded {len(loaded_controllers)} controllers from {json_path}")
 
     def save_devices_to_files(self, json_path: Path) -> None:
         """
         Save current controllers and their devices to controllers_devices.json configuration file.
         """
         if not self.controllers:
-            logging.warning("No controllers to save. Skipping file write.")
+            logger.warning("No controllers to save. Skipping file write.")
             return
 
         controllers_data: List[Dict[str, Any]] = []
@@ -161,7 +164,7 @@ class ADCControllerManager:
                 controller_dict["devices"] = [asdict(dev) for dev in devices]
 
             else:
-                logging.warning(
+                logger.warning(
                     f"Unknown controller type {type(controller).__name__}. Skipping."
                 )
                 continue
@@ -169,12 +172,12 @@ class ADCControllerManager:
             controllers_data.append(controller_dict)
 
         if not controllers_data:
-            logging.warning("No valid controllers to save. Skipping file write.")
+            logger.warning("No valid controllers to save. Skipping file write.")
             return
 
         output_data = {"controllers": controllers_data}
         write_json(json_path, output_data)
-        logging.info(
+        logger.info(
             f"Saved {len(controllers_data)} controllers with "
             f"{sum(len(c.get('devices', [])) for c in controllers_data)} total devices to {json_path}"
         )
@@ -185,19 +188,19 @@ class ADCControllerManager:
         """
         discovered_controllers: List[BaseController] = []
         for manager in self._SUPPORTED_CONTROLLER:
-            logging.blank_line()
-            logging.info(f"Auto-discovering devices for {manager.__name__}")
+            blank_line_module()
+            logger.info(f"Auto-discovering devices for {manager.__name__}")
 
             try:
                 controllers = manager.scan_devices()
                 discovered_controllers.extend(controllers)
             except Exception as e:
-                logging.exception(
+                logger.exception(
                     f"Failed to auto-discover devices for {manager.__class__.__name__}, {e}",
                 )
 
         if not discovered_controllers:
-            logging.warning("No devices discovered on all managers.")
+            logger.warning("No devices discovered on all managers.")
 
         self.controllers = discovered_controllers
 

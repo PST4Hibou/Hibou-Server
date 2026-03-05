@@ -5,7 +5,9 @@ from collections import deque
 
 from src.arguments import args
 from src.helpers.decorators import SingletonMeta
-from src.logger import logger
+from src.logger import CustomLogger
+
+logger = CustomLogger("audio").get_logger()
 from src.modules.audio.devices.audio_device_controller import ADCControllerManager
 from src.modules.audio.dispatcher import AudioDispatcher
 from src.modules.audio.streaming import GstChannel
