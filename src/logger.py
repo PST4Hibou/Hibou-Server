@@ -65,6 +65,34 @@ class CustomLogger:
         return self.logger
 
 
+def update_global_log_level() -> None:
+    """Update the log level of all app loggers and their handlers from SETTINGS.LOG_LEVEL."""
+    level = _get_log_level()
+    suppressed = {
+        "asyncio",
+        "matplotlib",
+        "netaudio",
+        "charset_normalizer",
+        "fsspec.http",
+        "httpx",
+        "requests",
+    }
+    # Update root logger
+    logging.root.setLevel(level)
+    for handler in logging.root.handlers:
+        handler.setLevel(level)
+    # Update all registered loggers (skip suppressed external libs)
+    for name in logging.root.manager.loggerDict:
+        if name in suppressed:
+            continue
+        logger = logging.getLogger(name)
+        if not isinstance(logger, logging.Logger):
+            continue
+        logger.setLevel(level)
+        for handler in logger.handlers:
+            handler.setLevel(level)
+
+
 def blank_line_module(log_level="DEBUG", how_many_lines=1):
     if SETTINGS.LOG_LEVEL == log_level:
         for _ in range(how_many_lines):

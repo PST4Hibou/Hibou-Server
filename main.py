@@ -1,9 +1,9 @@
 import time
 
-# from src.doctor import run_doctor
+from src.doctor import run_doctor
 from src.helpers.decorators import SingletonMeta
 from src.helpers.process_manager import managed_processes
-from src.logger import CustomLogger
+from src.logger import CustomLogger, update_global_log_level
 
 from src.modules.audio.worker import AudioWorker
 from src.modules.decision.worker import DecisionWorker
@@ -19,11 +19,10 @@ def apply_arguments():
         SETTINGS.INFER_FROM_FOLDER = args.infer_from_folder
     if args.log_level:
         SETTINGS.LOG_LEVEL = args.log_level
-    # update_log_level()
-    # update_global_log_level()
-    #
-    # if args.doctor:
-    #     run_doctor()
+    update_global_log_level()
+
+    if args.doctor:
+        run_doctor()
 
 
 logger = CustomLogger("main").get_logger()
