@@ -7,6 +7,7 @@ from pathlib import Path as PathlibPath
 
 from helpers.math import map_range
 
+
 class TestMath:
     def test_map_range(self):
         assert map_range(5, 0, 10, 0, 50) == 25
