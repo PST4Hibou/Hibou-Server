@@ -28,7 +28,7 @@ class VisionWorker:
             model_type=SETTINGS.AI_CV_MODEL_TYPE,
             model_path=Path("assets/computer_vision_models/", SETTINGS.AI_CV_MODEL),
             enable_recording=SETTINGS.REC_VIDEO_ENABLE,
-            save_fp=Path(self.recs_folder_name, "/main_camera_box.avi"),
+            save_fp=Path(self.recs_folder_name, "main_camera_box.avi"),
         )
 
         PTZController(
