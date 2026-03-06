@@ -120,7 +120,8 @@ class GStreamerEngine:
             # Do not directly use the return value of set_state, as it may be ASYNC. Instead, check the state
             # after setting it, blocking.
             p.set_state(Gst.State.PLAYING)
-            if p.get_state() == Gst.StateChangeReturn.FAILURE:
+            ret, _, _ = p.get_state(10e6)
+            if ret == Gst.StateChangeReturn.FAILURE:
                 raise RuntimeError("Failed to start pipeline")
 
     def stop(self):

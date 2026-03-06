@@ -219,7 +219,8 @@ class RtspSource(VideoSource, VideoRecorder):
             # Do not directly use the return value of set_state, as it may be ASYNC. Instead, check the state
             # after setting it, blocking.
             self._rec_pipeline.set_state(Gst.State.PLAYING)
-            if self._rec_pipeline.get_state() == Gst.StateChangeReturn.FAILURE:
+            ret, _, _ = self._rec_pipeline.get_state(10e6)
+            if ret == Gst.StateChangeReturn.FAILURE:
                 self._rec_pipeline = None
                 raise RuntimeError("Failed to start recording pipeline")
 
