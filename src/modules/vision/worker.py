@@ -20,6 +20,9 @@ class VisionWorker:
             SETTINGS.REC_SAVE_FP,
             f"{dt.strftime('%Y-%m-%d_%H:%M:%S')}",
         )
+
+        Path(self.recs_folder_name).mkdir(parents=True, exist_ok=True)
+
         self.drone_detector = DroneDetection(
             enable=SETTINGS.AI_CV_ENABLE,
             model_type=SETTINGS.AI_CV_MODEL_TYPE,
