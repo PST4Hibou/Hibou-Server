@@ -20,17 +20,20 @@ class DroneDetection:
         model_path: Path = "yolov8n.pt",
         enable: bool = True,
     ):
+        self.model = None
+        self.channels = 0
+        self.results_queue = deque(maxlen=1)
+
+        self._thread: threading.Thread | None = None
+        self._stream: VideoSource | None = None
+        self._stop_event = threading.Event()
+        self._fps = 0.0
+
         if not enable:
             logging.warning("Drone detection disabled.")
             return
         self.model = YOLOModel(model_path)
         self.channels = self.model.model.yaml.get("channels")
-        self._stop_event = threading.Event()
-        self._thread: threading.Thread | None = None
-        self._stream: VideoSource | None = None
-        self._fps = 0.0
-
-        self.results_queue = deque(maxlen=1)
 
         logging.info(f"DroneDetection initialized with model: {model_type}")
 
