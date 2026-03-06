@@ -30,7 +30,16 @@ class AudioDispatcher:
         self.predictions_queue.append(res)
         self.probabilities_queue.append(prb)
 
-        if any(res):
-            print("Drone")
-        else:
-            print("Other")
+        # if any(res):
+        #     print("Drone")
+        # else:
+        #     print("Other")
+
+    def get_last_channels(self) -> list[GstChannel] | None:
+        try:
+            return self.audio_queue.pop()
+        except IndexError:
+            return None
+
+    def is_empty(self) -> bool:
+        return len(self.audio_queue) == 0

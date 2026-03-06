@@ -6,6 +6,12 @@ from collections import deque
 from src.arguments import args
 from src.helpers.decorators import SingletonMeta
 from src.logger import CustomLogger
+from src.modules.audio.localization.energy import compute_energy
+from src.modules.audio.streaming.debug.channel_spectrogram import (
+    ChannelTimeSpectrogram,
+    StftSpectrogram,
+)
+from src.modules.audio.streaming.debug.radar import RadarPlot
 
 logger = CustomLogger("audio").get_logger()
 from src.modules.audio.devices.audio_device_controller import ADCControllerManager
@@ -92,5 +98,50 @@ class AudioWorker:
         self.source.set_callback(audio.process)
         self.source.start()
 
+        nb_channels = sum([x.nb_channels for x in self.controller_manager.adc_devices])
+        if nb_channels == 0:
+            raise Exception("No ADC devices found! 0 channels available. Exiting.")
+        frame_duration_s = SETTINGS.AUDIO_CHUNK_DURATION / 1000
+
+        # Only for debug purposes
+        energy_spectrum_plot = (
+            ChannelTimeSpectrogram(nb_channels, frame_duration_s)
+            if SETTINGS.AUDIO_ENERGY_SPECTRUM
+            else None
+        )
+        # Only for debug purposes
+        stft_spectrum_plot = (
+            StftSpectrogram(nb_channels, frame_duration_s)
+            if SETTINGS.AUDIO_STFT_SPECTRUM
+            else None
+        )
+        # Only for debug purposes
+        radar_plot = RadarPlot() if SETTINGS.AUDIO_RADAR else None
+        phi_angle = 0
+
         while True:
             time.sleep(0.01)
+
+            if not audio.is_empty():
+                channels = audio.get_last_channels()
+
+                # Only for debug purposes
+                if SETTINGS.AUDIO_ENERGY_SPECTRUM and energy_spectrum_plot is not None:
+                    energy_spectrum_plot.set_input(energies)
+
+                # Only for debug purposes
+                if SETTINGS.AUDIO_STFT_SPECTRUM and stft_spectrum_plot is not None:
+                    stft_spectrum_plot.set_input([channel[0] for channel in channels])
+
+                #  Only for debug purposes
+                energies = [compute_energy(ch) for ch in channels]
+                if SETTINGS.AUDIO_RADAR and radar_plot is not None:
+                    radar_plot.set_input(phi_angle, max(energies))
+
+            if stft_spectrum_plot:
+                stft_spectrum_plot.update()
+            if energy_spectrum_plot:
+                energy_spectrum_plot.update()
+            if radar_plot:
+                radar_plot.update()
+                phi_angle = (phi_angle + 5) % 360
