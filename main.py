@@ -1,15 +1,14 @@
-import time
-
-from src.doctor import run_doctor
-from src.helpers.decorators import SingletonMeta
-from src.helpers.process_manager import managed_processes
 from src.logger import CustomLogger, update_global_log_level
-
-from src.modules.audio.worker import AudioWorker
+from src.helpers.process_manager import managed_processes
 from src.modules.decision.worker import DecisionWorker
 from src.modules.vision.worker import VisionWorker
+from src.helpers.decorators import SingletonMeta
+from src.modules.audio.worker import AudioWorker
 from src.settings import SETTINGS
+from src.doctor import run_doctor
 from src.arguments import args
+
+import time
 
 
 def apply_arguments():
