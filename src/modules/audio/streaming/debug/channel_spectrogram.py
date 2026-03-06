@@ -76,7 +76,21 @@ class ChannelTimeSpectrogram:
 
 
 def convert_to_linear_spectrogram(audios: list):
-    return [np.array(librosa.amplitude_to_db(np.abs(librosa.stft(np.array(a, dtype=np.float32), n_fft=2048, hop_length=512)), ref=np.max), dtype=np.float32) for a in audios]
+    return [
+        np.array(
+            librosa.amplitude_to_db(
+                np.abs(
+                    librosa.stft(
+                        np.array(a, dtype=np.float32), n_fft=2048, hop_length=512
+                    )
+                ),
+                ref=np.max,
+            ),
+            dtype=np.float32,
+        )
+        for a in audios
+    ]
+
 
 class StftSpectrogram:
     def __init__(self, num_mics=8, frame_duration_s=0.5):

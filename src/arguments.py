@@ -2,7 +2,7 @@ import argparse
 import gi
 
 gi.require_version("Gst", "1.0")
-from gi.repository import Gst
+from gi.repository import Gst  # type: ignore
 
 
 def gst_dbg_level_validator(level: str):

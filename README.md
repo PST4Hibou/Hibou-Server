@@ -4,7 +4,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12_|_3.13-blue?logo=python)
 [![Github](https://img.shields.io/badge/github-PST4Hibou-yellow?logo=github)](https://github.com/PST4Hibou)
-[![UV](https://img.shields.io/badge/uv-0.1.0-purple?logo=uv)](https://docs.astral.sh/uv/)
+[![UV](https://img.shields.io/badge/uv-0.10.7-purple?logo=uv)](https://docs.astral.sh/uv/)
 
 </br>
 
