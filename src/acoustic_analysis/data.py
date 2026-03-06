@@ -11,6 +11,7 @@ class MicInfo:
     channel: int
     xpos: float
     ypos: float
+    # Unit is radians.
     orientation: float
 
 
@@ -20,6 +21,7 @@ class TimestampedData:
     A class to represent a timestamped data point.
     """
 
+    # Unit is nanoseconds since stream start (from GST).
     timestamp: int
     channel: int
 
