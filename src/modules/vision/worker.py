@@ -14,12 +14,15 @@ from src.settings import SETTINGS
 
 
 class VisionWorker:
-    def __init__(self):
+    def __init__(self, dt: datetime.datetime):
         logger.info(f"Started Vision Worker | PID: {os.getpid()}")
         self.recs_folder_name = os.path.join(
             SETTINGS.REC_SAVE_FP,
-            f"{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}",
+            f"{dt.strftime('%Y-%m-%d_%H:%M:%S')}",
         )
+
+        Path(self.recs_folder_name).mkdir(parents=True, exist_ok=True)
+
         self.drone_detector = DroneDetection(
             enable=SETTINGS.AI_CV_ENABLE,
             model_type=SETTINGS.AI_CV_MODEL_TYPE,
