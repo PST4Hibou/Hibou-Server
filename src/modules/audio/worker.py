@@ -22,9 +22,10 @@ class AudioWorker:
     Main class responsible for managing audio devices, streaming audio data and inferencing
     """
 
-    def __init__(self):
+    def __init__(self, dt: datetime.datetime):
         logger.info(f"Started Audio Worker | PID: {os.getpid()}")
 
+        self.initial_dt = dt
         # In charge of managing audio devices, including discovery and control
         self.controller_manager = ADCControllerManager()
         self._load_devices()
@@ -63,7 +64,7 @@ class AudioWorker:
         # Folder to save recordings
         recs_folder_name = os.path.join(
             SETTINGS.REC_SAVE_FP,
-            f"{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}",
+            f"{self.initial_dt.strftime('%Y-%m-%d_%H:%M:%S')}",
         )
 
         if args.infer_from_folder:

@@ -14,18 +14,18 @@ from src.settings import SETTINGS
 
 
 class VisionWorker:
-    def __init__(self):
+    def __init__(self, dt: datetime.datetime):
         logger.info(f"Started Vision Worker | PID: {os.getpid()}")
         self.recs_folder_name = os.path.join(
             SETTINGS.REC_SAVE_FP,
-            f"{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}",
+            f"{dt.strftime('%Y-%m-%d_%H:%M:%S')}",
         )
         self.drone_detector = DroneDetection(
             enable=SETTINGS.AI_CV_ENABLE,
             model_type=SETTINGS.AI_CV_MODEL_TYPE,
             model_path=Path("assets/computer_vision_models/", SETTINGS.AI_CV_MODEL),
             enable_recording=SETTINGS.REC_VIDEO_ENABLE,
-            save_fp=Path(self.recs_folder_name, "main_camera_box.avi"),
+            save_fp=Path(self.recs_folder_name, "/main_camera_box.avi"),
         )
 
         PTZController(
