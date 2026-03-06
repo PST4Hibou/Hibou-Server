@@ -471,8 +471,8 @@ class DS2DY9250IAXA(BaseVendor):
 
             self._current_pan, self._current_tilt, self._current_zoom = (
                 self._convert_hardware_to_logical(
-                    self._current_elevation,
                     self._current_azimuth,
+                    self._current_elevation,
                     self._current_zoom_hw,
                 )
             )
