@@ -6,8 +6,6 @@ class TestJson:
     def test_write_read_json(
         self, tmp_path: Path
     ):  # -> https://docs.pytest.org/en/stable/reference/reference.html#pytest.TempPathFactory
-        print()
-        print(tmp_path)
         data = {"name": "Bob", "age": 35, "scores": [0, 1, 100]}
         file_path = tmp_path / "test.json"
 
