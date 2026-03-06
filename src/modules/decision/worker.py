@@ -1,10 +1,9 @@
-import time
-import datetime
 from src.logger import CustomLogger
 
-logger = CustomLogger("decision").get_logger()
+import datetime
 import os
 
+logger = CustomLogger("decision").get_logger()
 
 class DecisionWorker:
     def __init__(self, dt: datetime.datetime):
