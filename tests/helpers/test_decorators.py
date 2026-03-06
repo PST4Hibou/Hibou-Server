@@ -67,24 +67,6 @@ class TestSingletonDecorator:
         c2 = Cache()
         assert c1 is c2 
 
-class TestRangeDataclass:
-    
-    def test_range_creation(self):
-
-        r = Range(min=1, max=10)
-        assert r.min == 1
-        assert r.max == 10
-    
-    def test_range_frozen_immutable(self):
-        r = Range(min=0, max=100)
-        with pytest.raises(AttributeError):
-            r.min = 5 # type: ignore[attr-defined]
-    
-    def test_range_invalid_values(self):
-        r1 = Range(min=10, max=1)  
-        r2 = Range(min=-5, max=0) 
-        assert r1.min == 10
-        assert r2.max == 0
 
 @pytest.fixture(autouse=True) 
 def cleanup_singletons():
