@@ -9,7 +9,9 @@ def managed_processes(targets):
 
     processes = [Process(target=t, args=(dt,)) for t in targets]
     try:
-        for p in processes: p.start()
+        for p in processes:
+            p.start()
         yield processes
     finally:
-        for p in processes: p.join()
+        for p in processes:
+            p.join()
