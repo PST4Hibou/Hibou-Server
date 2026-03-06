@@ -28,9 +28,9 @@ class ModelProxy:
         )
         self._model = self._module.Model()
 
-    def infer(self, audios: list) -> np.ndarray:
+    def infer(self, audios: list) -> tuple[np.ndarray, np.ndarray]:
         if not self._enable:
-            return np.zeros(len(audios), dtype=int)
+            return np.zeros(len(audios), dtype=int), np.zeros(len(audios), dtype=float)
 
         predictions = self._model.infer(audios)
         return predictions
