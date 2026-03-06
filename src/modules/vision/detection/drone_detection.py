@@ -28,8 +28,11 @@ class DroneDetection:
         self.enable = enable
         if not self.enable:
             logger.warning("Drone detection disabled.")
-        self.model = YOLOModel(model_path)
-        self.channels = self.model.model.yaml.get("channels")
+            self.model = None
+            self.channels = None
+        else:
+            self.model = YOLOModel(model_path)
+            self.channels = self.model.model.yaml.get("channels")
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self._stream: VideoSource | None = None
