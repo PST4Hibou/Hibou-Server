@@ -1,11 +1,13 @@
-from src.devices.audio.audio_device_controller import ADCControllerManager
-from src.devices.camera.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
-from src.devices.camera.ptz_controller import PTZController
-from src.network.helpers.networks import get_networks
-from src.network.helpers.ping import ping
+from src.modules.audio.devices.audio_device_controller import ADCControllerManager
+from src.modules.vision.devices.vendors.hikvision.ds_2dy9250iax_a import DS2DY9250IAXA
+from src.modules.vision.devices.ptz_controller import PTZController
+from src.helpers.network.networks import get_networks
+from src.helpers.network.ping import ping
 from src.settings import SETTINGS
 from rich.console import Console
-from src.logger import logger
+from src.logger import CustomLogger
+
+logger = CustomLogger("doctor").get_logger()
 from rich.table import Table
 from rich.text import Text
 

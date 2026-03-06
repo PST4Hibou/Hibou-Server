@@ -1,45 +1,96 @@
-from src.settings import SETTINGS
-
-import logging.config
+import logging
 import os
+
 import colorlog
 
-# Make sure the logs directory exists
-os.makedirs(os.path.dirname(SETTINGS.LOG_PATH), exist_ok=True)
+from src.settings import SETTINGS
 
-logging.config.fileConfig(
-    SETTINGS.LOG_CONF_PATH,
-    defaults={"logfilename": SETTINGS.LOG_PATH},
-    disable_existing_loggers=False,
-)
 
-root_logger = logging.getLogger()
+def _get_log_level():
+    """Convert LOG_LEVEL string to logging constant."""
+    level = getattr(logging, str(SETTINGS.LOG_LEVEL).upper(), logging.INFO)
+    return level
 
-# Default format if nothing found
-fmt = "%(asctime)s %(levelname)s %(name)s %(message)s"
-# Remove only Console handler
-for handler in root_logger.handlers:
-    if not isinstance(handler, logging.FileHandler) and isinstance(
-        handler, logging.StreamHandler
-    ):
-        fmt = handler.formatter._fmt
-        root_logger.removeHandler(handler)
 
-ch = logging.StreamHandler()
+class CustomLogger:
+    """Modular logger: use different names for different processes/files.
+    Each logger writes to its own file and to the console.
+    """
 
-formatter = colorlog.ColoredFormatter(
-    "%(log_color)s" + fmt,
-    log_colors={
-        "DEBUG": "cyan",
-        "INFO": "green",
-        "WARNING": "yellow",
-        "ERROR": "red",
-        "CRITICAL": "red,bg_white",
-    },
-)
+    def __init__(self, name: str):
+        self.name = name
+        self.log_file = os.path.join(SETTINGS.LOG_PATH, f"{name}.log")
+        self.logger = logging.getLogger(name)
 
-ch.setFormatter(formatter)
-root_logger.addHandler(ch)
+        # Avoid duplicate handlers when reusing the same logger name
+        if self.logger.handlers:
+            return
+
+        os.makedirs(SETTINGS.LOG_PATH, exist_ok=True)
+        level = _get_log_level()
+
+        self.logger.setLevel(level)
+        self.logger.propagate = False
+
+        # Plain formatter for file (no ANSI codes)
+        file_formatter = logging.Formatter(
+            "%(asctime)s %(levelname)s %(name)s %(message)s"
+        )
+
+        # Colored formatter for console
+        console_formatter = colorlog.ColoredFormatter(
+            "%(log_color)s%(asctime)s %(levelname)s %(name)s %(message)s",
+            log_colors={
+                "DEBUG": "cyan",
+                "INFO": "green",
+                "WARNING": "yellow",
+                "ERROR": "red",
+                "CRITICAL": "red,bg_white",
+            },
+        )
+
+        # File handler: each process/logger writes to its own file
+        file_handler = logging.FileHandler(self.log_file)
+        file_handler.setLevel(level)
+        file_handler.setFormatter(file_formatter)
+        self.logger.addHandler(file_handler)
+
+        # Console handler: logs always visible in terminal
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(level)
+        console_handler.setFormatter(console_formatter)
+        self.logger.addHandler(console_handler)
+
+    def get_logger(self) -> logging.Logger:
+        return self.logger
+
+
+def update_global_log_level() -> None:
+    """Update the log level of all app loggers and their handlers from SETTINGS.LOG_LEVEL."""
+    level = _get_log_level()
+    suppressed = {
+        "asyncio",
+        "matplotlib",
+        "netaudio",
+        "charset_normalizer",
+        "fsspec.http",
+        "httpx",
+        "requests",
+    }
+    # Update root logger
+    logging.root.setLevel(level)
+    for handler in logging.root.handlers:
+        handler.setLevel(level)
+    # Update all registered loggers (skip suppressed external libs)
+    for name in logging.root.manager.loggerDict:
+        if name in suppressed:
+            continue
+        logger = logging.getLogger(name)
+        if not isinstance(logger, logging.Logger):
+            continue
+        logger.setLevel(level)
+        for handler in logger.handlers:
+            handler.setLevel(level)
 
 
 def blank_line_module(log_level="DEBUG", how_many_lines=1):
@@ -47,9 +98,6 @@ def blank_line_module(log_level="DEBUG", how_many_lines=1):
         for _ in range(how_many_lines):
             print("")
 
-
-logging.blank_line = blank_line_module
-logger = logging.getLogger(__name__)
 
 # external logger
 logging.getLogger("asyncio").setLevel(logging.CRITICAL)
@@ -59,11 +107,3 @@ logging.getLogger("charset_normalizer").setLevel(logging.CRITICAL)
 logging.getLogger("fsspec.http").setLevel(logging.CRITICAL)
 logging.getLogger("httpx").setLevel(logging.CRITICAL)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
-
-
-def update_log_level():
-    ch.setLevel(SETTINGS.LOG_LEVEL)
-
-
-def update_global_log_level():
-    root_logger.setLevel(SETTINGS.LOG_LEVEL)
