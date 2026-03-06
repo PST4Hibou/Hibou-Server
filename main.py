@@ -22,9 +22,10 @@ from collections import deque
 from pathlib import Path
 from time import sleep
 
+from src.acoustic_analysis.strategies.gcc_phat.strategy import Analyzer as Gcc
+from src.acoustic_analysis.strategies.te_manu.strategy import Analyzer as Complicated
 from src.acoustic_analysis.data import MicInfo, AudioBuffer, InferenceResult
 from src.helpers.decorators import SingletonMeta
-import assets.audio_strategies.music as Music
 
 import numpy as np
 import datetime
@@ -47,48 +48,75 @@ def apply_arguments():
         start_ptz_calibration()
 
 
+def generate_mics():
+    angles = [0, 30, 60]
+    xpos = [0, 1, 2]
+    ypos = [0, 0.5, 0]
+
+    return [
+        MicInfo(
+            channel=i,
+            xpos=xpos[i],
+            ypos=ypos[i],
+            orientation=angles[i],
+        )
+        for i in range(3)
+    ]
+
+
 class AudioProcess:
     def __init__(self):
         self.audio_queue = deque(maxlen=1)
         self.model = ModelProxy(args.audio_model)
 
-        mics_data = [
-            MicInfo(
-                channel=i,
-                xpos=Music.mic_positions[1][i],
-                ypos=Music.mic_positions[0][i],
-                orientation=Music.angles[i],
-            )
-            for i in range(Music.num_mics)
-        ]
-
-        self.analyzer = Music.Analyzer(SETTINGS.AUDIO_REC_HZ, mics_data)
+        mic_infos = generate_mics()
+        self.analyzer0 = Complicated(SETTINGS.AUDIO_REC_HZ, mic_infos)
+        self.analyzer1 = Gcc(SETTINGS.AUDIO_REC_HZ, mic_infos)
 
     def process(self, audio_samples: list[Channel]):
         self.audio_queue.append(audio_samples)
 
-        res = self.model.infer(audio_samples)
+        res, confs = self.model.infer([audio[0] for audio in audio_samples[:3]])
+        confs = [
+            float(conf.item()) if hasattr(conf, "item") else float(conf)
+            for conf in confs
+        ]
+        print(confs)
 
         i = 0
-        for audio, pts in audio_samples:
-            self.analyzer.push_buffer(
+        for audio, pts in audio_samples[:3]:
+            self.analyzer0.push_buffer(
+                AudioBuffer(timestamp=pts, channel=i, data=np.array(audio))
+            )
+            self.analyzer1.push_buffer(
                 AudioBuffer(timestamp=pts, channel=i, data=np.array(audio))
             )
             i += 1
         i = 0
         for pred in res:
-            self.analyzer.push_inference(
+            self.analyzer0.push_inference(
                 InferenceResult(
-                    timestamp=audio_samples[i][1], channel=i, confidence=0, drone=pred
+                    timestamp=audio_samples[i][1],
+                    channel=i,
+                    confidence=confs[i],
+                    drone=bool(pred),
+                )
+            )
+            self.analyzer1.push_inference(
+                InferenceResult(
+                    timestamp=audio_samples[i][1],
+                    channel=i,
+                    confidence=confs[i],
+                    drone=bool(pred),
                 )
             )
             i += 1
 
-        print(self.analyzer.get_angle())
-        # if np.any(res):
-        #     print(f"DRONE: {res}")
-        # else:
-        #     print(f"NONE: {res}")
+        print(
+            "Y" if np.any(res) else "N",
+            self.analyzer0.get_angle(),
+            self.analyzer1.get_angle(),
+        )
 
         if SETTINGS.AUDIO_PLAYBACK:  # Only for debug purposes
             play_sample(audio_samples, 0)
