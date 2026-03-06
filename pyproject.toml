@@ -35,9 +35,46 @@ dependencies = [
 netaudio = { git = "https://github.com/BugProg/network-audio-controller.git" }
 
 [tool.pytest.ini_options]
-pythonpath = "src"
+minversion = "7.0"
+pythonpath = [".","src"]
 testpaths = ["tests"]
-python_files = "test_*.py"
-python_classes = "Test*"
-addopts = "-v --strict-markers"
+python_files   = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v -ra --strict-markers"
+markers = [
+    "unit: tests unitaires sans dépendance externe",
+    "integration: tests d'intégration (FileAudioSource, pipeline audio)",
+    "hardware: tests nécessitant un vrai matériel (exclus par défaut)",
+]
+
+mock_use_standalone_module = false
+mock_traceback_monkeypatch = true
+
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+omit = [
+    "src/audio/debug/*",
+    "src/doctor.py",
+    "main.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+exclude_also = [
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+title = "Drone Detection Server — Coverage"
+
 
