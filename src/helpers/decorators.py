@@ -8,6 +8,10 @@ class SingletonMeta(type):
             SingletonMeta._instances[cls] = super().__call__(*args, **kwargs)
         return SingletonMeta._instances[cls]
 
+    @staticmethod
+    def clear():
+        SingletonMeta._instances.clear()
+
 def singleton(cls):
     return SingletonMeta(cls.__name__, cls.__bases__, dict(cls.__dict__))
 
