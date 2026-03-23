@@ -1,7 +1,7 @@
 from pyroomacoustics.experimental import tdoa
 
-from src.acoustic_analysis.analyzer import AudioAnalyzer
-from src.acoustic_analysis.data import AudioBuffer, InferenceResult, MicInfo
+from src.modules.audio.localization.analyzer import AudioAnalyzer
+from src.modules.audio.localization.data import AudioBuffer, InferenceResult, MicInfo
 from typing import override
 
 import numpy as np
@@ -16,15 +16,15 @@ DEFAULT_MIC_SPACING = 0.5
 
 
 class Analyzer(AudioAnalyzer):
-    def __init__(self, sample_rate: int, mic_infos: list[MicInfo]):
-        super().__init__(sample_rate, mic_infos)
+    def __init__(self, sample_rate: int):
+        super().__init__(sample_rate)
 
         self.audio_buffers = {}
         self.inference_results = {}
-        self.mic_spacing = self._compute_mic_spacing(mic_infos)
-        self.array_orientation = np.mean([m.orientation for m in mic_infos])
+        self.mic_spacing = self._compute_mic_spacing()
+        # self.array_orientation = np.mean([m.orientation for m in mic_infos])
 
-    def _compute_mic_spacing(self, mic_infos: list[MicInfo]) -> float:
+    def _compute_mic_spacing(self) -> float:
         return DEFAULT_MIC_SPACING
         # m0, m1 = mic_infos[0], mic_infos[1]
         # if (
@@ -101,5 +101,5 @@ class Analyzer(AudioAnalyzer):
         print(theta)
 
         # map to global azimuth (0–360°): array orientation + angle from normal
-        azimuth = (self.array_orientation + theta) % 360
-        return azimuth
+        # azimuth = (self.array_orientation + theta) % 360
+        return theta

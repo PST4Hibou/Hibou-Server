@@ -9,9 +9,8 @@ class AudioAnalyzer(ABC):
     Subclasses must implement audio buffer processing, inference integration, and angle computation.
     """
 
-    def __init__(self, sample_rate: int, mic_infos: list[MicInfo]):
+    def __init__(self, sample_rate: int):
         self.sample_rate = sample_rate
-        self.mic_infos = mic_infos
 
     @abstractmethod
     def push_buffer(self, buffer: AudioBuffer):
