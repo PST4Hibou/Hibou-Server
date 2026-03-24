@@ -1,7 +1,8 @@
+from abc import ABCMeta
 from dataclasses import dataclass
 
 
-class SingletonMeta(type):
+class SingletonMeta(ABCMeta):
     _instances = {}
     def __call__(cls, *args, **kwargs):
         if cls not in SingletonMeta._instances:

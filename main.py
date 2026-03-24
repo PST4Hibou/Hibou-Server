@@ -1,3 +1,5 @@
+from src.helpers.ipc import base_ipc
+from src.helpers.ipc.zmqhandler import ZmqHandler
 from src.logger import CustomLogger, update_global_log_level
 from src.helpers.process_manager import managed_processes
 from src.modules.decision.worker import DecisionWorker
@@ -7,7 +9,7 @@ from src.modules.audio.worker import AudioWorker
 from src.settings import SETTINGS
 from src.doctor import run_doctor
 from src.arguments import args
-
+import multiprocessing as mp
 import time
 
 
@@ -27,8 +29,14 @@ def apply_arguments():
 logger = CustomLogger("main").get_logger()
 
 if __name__ == "__main__":
+    # Set the start method to spawn for multiprocessing
+    mp.set_start_method("spawn")
+
     start_time = time.time()
     apply_arguments()
+
+    
+    base_ipc.get_ipc_handler().lifespan()
 
     """
     Start audio, vision and decision modules in separate processes.
@@ -36,8 +44,8 @@ if __name__ == "__main__":
     try:
         with managed_processes(
             [
-                AudioWorker,
-                VisionWorker,
+                # AudioWorker,
+                # VisionWorker,
                 DecisionWorker,
             ]
         ):
