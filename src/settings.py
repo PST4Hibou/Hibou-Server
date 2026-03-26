@@ -59,12 +59,16 @@ class Settings:
     AI_CV_ENABLE: bool
     AI_MODELS_FOLDER: str
 
+    IPC_ACOUSTIC_ANGLE_TOPIC: str
+    IPC_ACOUSTIC_DETECTION_TOPIC: str
+    IPC_VISION_DECISION_TOPIC: str
+    IPC_VISION_DETECTION_TOPIC: str
+
     AUDIO_PLAYBACK: bool = False  # Only for debug purposes
     AUDIO_ENERGY_SPECTRUM: bool = False  # Only for debug purposes
     AUDIO_STFT_SPECTRUM: bool = False  # Only for debug purposes
     AUDIO_RADAR: bool = False  # Only for debug purposes
     CV_VIDEO_PLAYBACK: bool = False  # Only for debug purposes
-
 
 def parse_list(value: str):
     """Split a comma-separated string and strip whitespace."""
@@ -114,6 +118,10 @@ try:
         AI_CV_MODEL_TYPE=os.getenv("AI_CV_MODEL_TYPE"),
         AI_MODELS_FOLDER=os.getenv("AI_MODELS_FOLDER"),
         AI_CV_ENABLE=parse_bool(os.getenv("AI_CV_ENABLE")),
+        IPC_ACOUSTIC_ANGLE_TOPIC=os.getenv("IPC_ACOUSTIC_ANGLE_TOPIC"),
+        IPC_ACOUSTIC_DETECTION_TOPIC=os.getenv("IPC_ACOUSTIC_DETECTION_TOPIC"),
+        IPC_VISION_DECISION_TOPIC=os.getenv("IPC_VISION_DECISION_TOPIC"),
+        IPC_VISION_DETECTION_TOPIC=os.getenv("IPC_VISION_DETECTION_TOPIC"),
     )
 
 

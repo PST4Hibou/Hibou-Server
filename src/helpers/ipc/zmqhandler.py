@@ -1,6 +1,7 @@
 import logging
 import threading
 import time
+from typing import Callable
 
 import zmq
 from src.helpers.ipc.base_ipc import BaseIPC
@@ -21,7 +22,7 @@ class ZmqHandler(BaseIPC):
         self.stop_event = threading.Event()
         self.sub_threads = []
         self._pub_socket_local = threading.local()
-        self.listeners: dict[str, list[callable]] = {}
+        self.listeners: dict[str, list[Callable]] = {}
 
         threading.Thread(target=self._listen, daemon=True).start()
     
