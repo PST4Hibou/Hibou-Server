@@ -1,3 +1,4 @@
+from src.helpers.ipc.base_ipc import get_ipc_handler
 from src.modules.vision.devices.vendors.base_vendor import BaseVendor, PTZAxisRange
 from src.modules.vision.streaming.rtsp_stream import RtspSource
 from src.helpers.decorators import Range
@@ -8,6 +9,7 @@ import threading
 import time
 
 from src.logger import CustomLogger
+from src.settings import SETTINGS
 
 logger = CustomLogger("vision").get_logger()
 
@@ -110,6 +112,8 @@ class DS2DY9250IAXA(BaseVendor):
             logger.info(f"✅ Connected to PTZ camera at {self._host}")
         except Exception as e:
             logger.error(f"❌ Failed to connect to PTZ camera at {self._host}: {e}")
+
+        threading.Thread(target=self.update_status_thread, daemon=True).start()
 
     @staticmethod
     def _build_absolute_position_xml(
@@ -589,3 +593,15 @@ class DS2DY9250IAXA(BaseVendor):
             self.rtsp_stream.stop()
             self.rtsp_stream = None
             logger.info("📷 RTSP stream released.")
+
+    def update_status_thread(self):
+        """Continuously update PTZ status in a separate thread."""
+        ipc = get_ipc_handler()
+        while True:
+            self._update_status()
+            if status := self.get_status():
+                if "PTZStatus" in status and "AbsoluteHigh" in status["PTZStatus"]:
+                    azimuth = status["PTZStatus"]["AbsoluteHigh"]["azimuth"]
+                    elevation = status["PTZStatus"]["AbsoluteHigh"]["elevation"]
+                    ipc.publish(SETTINGS.IPC_VISION_ANGLE_TOPIC, f"{azimuth},{elevation}")
+            time.sleep(0.25)
