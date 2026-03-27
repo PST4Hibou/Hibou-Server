@@ -3,6 +3,7 @@ from collections import deque
 import numpy as np
 
 from src.arguments import args
+from src.helpers.ipc import base_ipc
 from src.modules.audio.detection.ai import ModelProxy
 from src.modules.audio.localization.data import AudioBuffer, InferenceResult
 from src.modules.audio.localization.strategies.gcc_phat.strategy import Analyzer
@@ -42,6 +43,7 @@ class AudioDispatcher:
         #     print("Drone")
         # else:
         #     print("Other")
+        base_ipc.get_ipc_handler().publish(SETTINGS.IPC_ACOUSTIC_DETECTION_TOPIC, "drone" if any(res) else "other")
 
         i = 0
         for audio, pts in audio_samples:

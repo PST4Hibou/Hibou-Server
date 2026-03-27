@@ -85,20 +85,20 @@ class Analyzer(AudioAnalyzer):
         if len(self.audio_buffers) != num_mics:
             raise ValueError("Not enough audio")
 
-        print()
+        # print()
         # Skip when no drone is detected
         # TODO:
         if not any(self.inference_results[i] for i in range(num_mics)):
-            print("No drone detected")
+            # print("No drone detected")
             return None
 
         signals = [self.audio_buffers[i] for i in range(num_mics)]
         tdoas = self.compute_tdoa_vector(signals, interp=1, fs=self.sample_rate)
-        print(tdoas)
+        # print(tdoas)
         # use TDOA of mic 1 relative to mic 0
         tau = tdoas[1]
         theta = self._tdoa_to_angle(tau)
-        print(theta)
+        # print(theta)
 
         # map to global azimuth (0–360°): array orientation + angle from normal
         # azimuth = (self.array_orientation + theta) % 360
