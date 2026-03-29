@@ -36,3 +36,14 @@ dependencies = [
 
 [tool.uv.sources]
 netaudio = { git = "https://github.com/BugProg/network-audio-controller.git" }
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+pythonpath = [".","src"]
+testpaths = ["tests"]
+python_files   = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v -ra --strict-markers"
+
+
